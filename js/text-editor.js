@@ -248,34 +248,51 @@ window.TextEditor = (() => {
 
   /* ── Save ── */
   async function saveChapter(isEdit) {
-    const errs={};
-    const num=parseInt(document.getElementById('tchnum')?.value||'');
-    if(!num||isNaN(num))errs.chapNum='Số chương không được để trống';
-    if(!chapData.languages.length)errs.langs='Chọn ít nhất 1 ngôn ngữ';
-    if(!chapData.segments.length)errs.segs='Thêm ít nhất 1 đoạn văn';
-    if(Object.keys(errs).length){App.errors=errs;App.go(App.view);return;}
+    const errs = {};
+    const num = parseInt(document.getElementById('tchnum')?.value || '');
+    if (!num || isNaN(num)) errs.chapNum = 'Số chương không được để trống';
+    if (!chapData.languages.length) errs.langs = 'Chọn ít nhất 1 ngôn ngữ';
+    if (!chapData.segments.length) errs.segs = 'Thêm ít nhất 1 đoạn văn';
+    if (Object.keys(errs).length) { App.errors = errs; App.go(App.view); return; }
 
     UI.showLoading('Đang lưu...');
-    const comic=App.getComic();
-    const title=document.getElementById('tchtitle')?.value||'Chương '+num;
+    try {
+      const comic = App.getComic();
+      const title = document.getElementById('tchtitle')?.value || 'Chương ' + num;
 
-    if(isEdit && editingChapMeta){
-      // Update metadata
-      const cidx=comic.chapters.findIndex(c=>c.id===editingChapMeta.id);
-      if(cidx>=0){comic.chapters[cidx].num=num;comic.chapters[cidx].title=title;}
-    } else {
-      // New chapter
-      if(!comic.chapters)comic.chapters=[];
-      comic.chapters.push({id:chapData.chapId,num,title,type:'text',languages:chapData.languages});
-      comic.chapters.sort((a,b)=>a.num-b.num);
+      if (isEdit && editingChapMeta) {
+        // Cập nhật metadata chương
+        const cidx = comic.chapters.findIndex(c => c.id === editingChapMeta.id);
+        if (cidx >= 0) {
+          comic.chapters[cidx].num = num;
+          comic.chapters[cidx].title = title;
+          comic.chapters[cidx].languages = chapData.languages;
+        }
+      } else {
+        // Thêm chương mới vào danh sách
+        if (!comic.chapters) comic.chapters = [];
+        comic.chapters.push({
+          id: chapData.chapId, num, title,
+          type: 'text', languages: chapData.languages, pages: [],
+        });
+        comic.chapters.sort((a, b) => a.num - b.num);
+      }
+
+      // Bước 1: lưu metadata lên Supabase (bảng chapters)
+      // Phải chạy TRƯỚC vì text_chaps có foreign key → chapters.id
+      await DB.saveMeta();
+
+      // Bước 2: lưu nội dung text chapter (bảng text_chaps)
+      await DB.saveTextChap(chapData.chapId, { ...chapData, comicId: comic.id });
+
+      UI.hideLoading();
+      App.errors = {};
+      App.go('chapters');
+    } catch (e) {
+      UI.hideLoading();
+      console.error('saveChapter error:', e);
+      alert('Lỗi khi lưu: ' + (e.message || e));
     }
-
-    // Save text data to IDB
-    await DB.saveTextChap(chapData.chapId,{...chapData,comicId:comic.id});
-    await DB.saveMeta();
-    UI.hideLoading();
-    App.errors={};
-    App.go('chapters');
   }
 
   return { openNew, openEdit, buildForm };
