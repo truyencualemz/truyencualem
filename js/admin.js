@@ -1,0 +1,411 @@
+/* ── ADMIN.JS ─────────────────────────────────────────────
+   All admin views: Library, Chapters, Comic form,
+   Chapter form, Settings.
+──────────────────────────────────────────────────────────── */
+window.Admin = (() => {
+  const U  = () => window.UI;
+  const go = (...a) => App.go(...a);
+  const fmtBytes = b => b < 1024**2 ? (b/1024).toFixed(0)+'KB' : b < 1024**3 ? (b/1024**2).toFixed(1)+'MB' : (b/1024**3).toFixed(1)+'GB';
+
+  /* ════ LIBRARY ════════════════════════════════════════ */
+  function viewLibrary() {
+    const w = U().div();
+    const sg = U().div('stats');
+    [[App.comics.length,'Tổng truyện'],
+     [App.comics.reduce((a,x)=>a+(x.chapters?.length||0),0),'Tổng chương'],
+     [App.comics.filter(x=>x.status==='published').length,'Công khai'],
+     [2,'Ngôn ngữ']].forEach(([v,l]) => {
+      sg.innerHTML += `<div class="sc"><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
+    });
+    w.appendChild(sg);
+    const h = U().div(); h.style.cssText = 'font-family:monospace;font-size:15px;margin-bottom:13px'; h.textContent = 'Tất cả truyện';
+    w.appendChild(h);
+    const grid = U().div('cg');
+    App.comics.forEach(m => {
+      const card = U().div('cc');
+      card.innerHTML = `<div class="ct">${m.cover
+        ? `<img src="${m.cover}" alt="" loading="lazy">`
+        : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`
+      }</div>
+<div class="ci">
+  <div class="cvi">${U().esc(m.titleVI)}</div>
+  <div class="cen">${U().esc(m.titleEN)||'—'}</div>
+  <div class="cm"><span class="badge ${m.status==='published'?'bok':'bdr'}">${m.status==='published'?'Công khai':'Nháp'}</span><span>${m.chapters?.length||0} ch</span></div>
+</div>`;
+      card.addEventListener('click', () => go('chapters', { selComicId: m.id }));
+      grid.appendChild(card);
+    });
+    const ac = U().div('add-cc');
+    ac.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg><span>Thêm truyện</span>`;
+    ac.addEventListener('click', () => { App.coverData = null; go('add-comic'); });
+    grid.appendChild(ac); w.appendChild(grid); return w;
+  }
+
+  /* ════ ADD / EDIT COMIC ═══════════════════════════════ */
+  function viewAddComic() {
+    const w = U().div(); w.style.maxWidth = '820px';
+    if (Object.keys(App.errors).length) {
+      const eb = U().div('ebanner'); eb.textContent = '⚠ ' + Object.values(App.errors).join(' · '); w.appendChild(eb);
+    }
+    const card = U().div('fc'); card.innerHTML = '<div class="fct">📖 Thông tin truyện</div>';
+
+    // Cover row
+    const cr = U().div(); cr.style.cssText = 'display:flex;gap:14px;align-items:flex-start;margin-bottom:14px';
+    const pv = U().div(); pv.style.flexShrink = '0';
+    pv.innerHTML = `<div id="cprev" style="width:80px;height:120px;background:#111;border-radius:7px;border:1px dashed #2a2a30;display:flex;align-items:center;justify-content:center;font-size:24px;color:#333">📖</div>
+<img id="cimg" style="display:none;width:80px;height:120px;object-fit:cover;border-radius:7px;border:1px solid #2a2a30" src="" alt="">`;
+    const rs = U().div(); rs.style.flex = '1';
+    const uz = U().div('uz');
+    uz.innerHTML = `<input type="file" id="cf" accept="image/*"><div class="uzi">🖼️</div><div class="uzt">Click chọn ảnh bìa</div><div class="uzh">JPG PNG WebP</div>`;
+    uz.querySelector('input').addEventListener('change', e => {
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader(); r.onload = ev => { App.coverData = ev.target.result; showCover(App.coverData); }; r.readAsDataURL(f);
+    });
+    const ui = U().el('input', 'fi'); ui.style.cssText = 'margin-top:7px;font-size:11px;padding:6px 9px'; ui.placeholder = 'Hoặc URL ảnh bìa';
+    ui.addEventListener('change', () => { if (ui.value.trim()) { App.coverData = ui.value.trim(); showCover(App.coverData); } });
+    rs.appendChild(uz); rs.appendChild(ui); cr.appendChild(pv); cr.appendChild(rs); card.appendChild(cr);
+
+    const r1 = U().div('fr');
+    [{ id: 'fvi', lbl: '🇻🇳 Tên truyện (VI) *', ph: 'VD: Thám Tử Conan', ek: 'titleVI' },
+     { id: 'fen', lbl: '🇬🇧 Title (EN)', ph: 'e.g. Detective Conan' }].forEach(f => {
+      const fg = U().div('fg'); fg.innerHTML = `<label class="fl">${f.lbl}</label>`;
+      const inp = U().el('input', 'fi' + (App.errors[f.ek] ? ' err' : '')); inp.id = f.id; inp.placeholder = f.ph;
+      fg.appendChild(inp);
+      if (App.errors[f.ek]) { const em = U().div('emsg'); em.textContent = '⚠ ' + App.errors[f.ek]; fg.appendChild(em); }
+      r1.appendChild(fg);
+    });
+    card.appendChild(r1);
+
+    const r2 = U().div('fr');
+    [{ id: 'fdvi', lbl: 'Mô tả (VI)', ph: 'Mô tả...' }, { id: 'fden', lbl: 'Description (EN)', ph: 'Description...' }].forEach(f => {
+      const fg = U().div('fg'); fg.innerHTML = `<label class="fl">${f.lbl}</label>`;
+      const ta = U().el('textarea', 'fi'); ta.id = f.id; ta.placeholder = f.ph; ta.rows = 2; fg.appendChild(ta); r2.appendChild(fg);
+    });
+    card.appendChild(r2);
+
+    const r3 = U().div('fr');
+    r3.innerHTML = `<div class="fg"><label class="fl">Thể loại</label><select class="fi" id="fgenre"><option value="action">Hành động</option><option value="romance">Tình cảm</option><option value="comedy">Hài hước</option><option value="mystery">Trinh thám</option><option value="fantasy">Kỳ ảo</option></select></div>
+<div class="fg"><label class="fl">Trạng thái</label><select class="fi" id="fstatus"><option value="published">Công khai</option><option value="draft">Nháp</option></select></div>`;
+    card.appendChild(r3); w.appendChild(card);
+
+    const sb = U().mkBtn('btn-primary', '✓ Lưu truyện', saveComic); sb.style.cssText = 'font-size:13px;padding:10px 24px';
+    w.appendChild(sb);
+    if (App.coverData) setTimeout(() => showCover(App.coverData), 20);
+    return w;
+  }
+
+  function showCover(src) {
+    const img = document.getElementById('cimg'), ph = document.getElementById('cprev');
+    if (img && ph) { img.src = src; img.style.display = 'block'; ph.style.display = 'none'; }
+  }
+
+  async function saveComic() {
+    if (App.isSaving) return; App.isSaving = true; setTimeout(() => { App.isSaving = false; }, 1500);
+    const errs = {}, vi = (document.getElementById('fvi')?.value || '').trim();
+    if (!vi) errs.titleVI = 'Tên truyện không được để trống';
+    if (Object.keys(errs).length) { App.errors = errs; App.isSaving = false; UI.renderContent(); return; }
+    UI.showLoading('Đang lưu...');
+    App.comics.push({ id: 'c' + Date.now(), titleVI: vi, titleEN: (document.getElementById('fen')?.value || '').trim(),
+      descVI: document.getElementById('fdvi')?.value || '', descEN: document.getElementById('fden')?.value || '',
+      genre: document.getElementById('fgenre')?.value || 'action', status: document.getElementById('fstatus')?.value || 'published',
+      cover: App.coverData || null, chapters: [] });
+    await DB.saveMeta(); UI.hideLoading(); App.coverData = null; App.errors = {}; go('library');
+  }
+
+  /* ════ CHAPTERS ═══════════════════════════════════════ */
+  function viewChapters() {
+    if (!App.comics.length) { const d=U().div(); d.innerHTML='<div style="text-align:center;padding:60px;color:#555;font-size:13px">Chưa có truyện nào.</div>'; return d; }
+    const comic=App.getComic(); if (!comic) { App.selComicId=App.comics[0].id; return viewChapters(); }
+    const w=U().div();
+    const hdr=U().div(); hdr.style.cssText='display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px';
+    const hl=U().div(); hl.innerHTML=`<div style="font-family:monospace;font-size:16px">${U().esc(comic.titleVI)}</div><div style="font-size:11px;color:#555;margin-top:2px">${U().esc(comic.titleEN)||''}</div>`;
+    const addBtns=U().div(); addBtns.style.cssText='display:flex;gap:6px';
+    addBtns.appendChild(U().mkBtn('btn-primary','+ Truyện tranh',()=>go('add-chapter',{clearPages:true})));
+    addBtns.appendChild(U().mkBtn('btn-ghost','+ Truyện chữ',()=>TextEditor.openNew()));
+    hdr.appendChild(hl); hdr.appendChild(addBtns); w.appendChild(hdr);
+
+    const tabs=U().div('tabs');
+    App.comics.forEach(m=>{const t=U().div('tab'+(m.id===comic.id?' active':''));t.textContent=m.titleVI||'?';t.addEventListener('click',()=>{App.selComicId=m.id;UI.renderContent();UI.renderNav();});tabs.appendChild(t);});
+    w.appendChild(tabs);
+
+    const chaps=comic.chapters||[];
+    if(!chaps.length){const d=U().div();d.innerHTML='<div style="text-align:center;padding:40px;color:#555;font-size:12px">Chưa có chương nào.</div>';w.appendChild(d);return w;}
+
+    chaps.forEach((ch,idx)=>{
+      const isText=ch.type==='text';
+      const item=U().div('chi');
+      const num=U().div('chn'); num.textContent='Ch.'+ch.num;
+      const info=U().div('chinfo');
+
+      if(isText){
+        const langs=(ch.languages||[]).map(l=>Translate.getLangLabel(l)).join(', ');
+        info.innerHTML=`<div class="cht">📝 ${U().esc(ch.title||'Chương '+ch.num)}</div>
+<div class="chs"><span style="color:#c8a96e">Truyện chữ</span><span>${langs}</span></div>`;
+        const acts=U().div('cha');
+        acts.appendChild(U().mkBtn('btn-ghost btn-sm','📖 Đọc',()=>TextReader.open(comic.id,idx)));
+        acts.appendChild(U().mkBtn('btn-ghost btn-sm','✏ Sửa',()=>TextEditor.openEdit(comic.id,ch.id)));
+        acts.appendChild(U().mkBtn('btn-danger btn-sm','Xóa',async()=>{
+          if(!confirm('Xóa chương này?'))return; UI.showLoading('Đang xóa...');
+          await DB.deleteTextChap(ch.id);
+          comic.chapters=comic.chapters.filter(c=>c.id!==ch.id);
+          await DB.saveMeta(); UI.hideLoading(); UI.renderContent();
+        }));
+        item.appendChild(num); item.appendChild(info); item.appendChild(acts);
+      } else {
+        const viC=(ch.pages||[]).filter(p=>p.vi).length, enC=(ch.pages||[]).filter(p=>p.en).length;
+        const mis=(ch.pages||[]).filter(p=>!!p.vi!==!!p.en).length;
+        info.innerHTML=`<div class="cht">🖼 ${U().esc(ch.title||'Chương '+ch.num)}</div>
+<div class="chs"><span>${ch.pages?.length||0} trang</span><span class="lt lvi">VI ${viC}</span><span class="lt len">EN ${enC}</span>${mis>0?`<span style="color:#e0a030">⚠ ${mis} lệch</span>`:`<span style="color:#4caf50">✓ khớp</span>`}</div>`;
+        const acts=U().div('cha');
+        acts.appendChild(U().mkBtn('btn-ghost btn-sm','🇻🇳 VI',()=>Reader.open(comic.id,idx,'single','vi')));
+        acts.appendChild(U().mkBtn('btn-ghost btn-sm','🇬🇧 EN',()=>Reader.open(comic.id,idx,'single','en')));
+        acts.appendChild(U().mkBtn('btn-ghost btn-sm','⧉ Song song',()=>Reader.open(comic.id,idx,'split','vi')));
+        acts.appendChild(U().mkBtn('btn-ghost btn-sm','✏ Sửa',()=>openEditChapter(comic.id,ch.id)));
+        acts.appendChild(U().mkBtn('btn-danger btn-sm','Xóa',async()=>{
+          if(!confirm('Xóa chương này?'))return; UI.showLoading('Đang xóa...');
+          DB.revokeChap(ch.id); PDFModule.invalidateChap(ch.id);
+          await DB.deleteByChap(ch.id);
+          comic.chapters=comic.chapters.filter(c=>c.id!==ch.id);
+          await DB.saveMeta(); UI.hideLoading(); UI.renderContent();
+        }));
+        item.appendChild(num); item.appendChild(info); item.appendChild(acts);
+      }
+      w.appendChild(item);
+    });
+    return w;
+  }
+
+  /* ════ ADD CHAPTER ════════════════════════════════════ */
+  function viewAddChapter() {
+    const w = U().div(); w.style.maxWidth = '900px';
+    if (Object.keys(App.errors).length) { const eb = U().div('ebanner'); eb.textContent = '⚠ ' + Object.values(App.errors).join(' · '); w.appendChild(eb); }
+    const ic = U().div('fc'); ic.innerHTML = '<div class="fct">📑 Thông tin chương</div>';
+    ic.innerHTML += `<div class="fr"><div class="fg"><label class="fl">Số chương *</label><input class="fi${App.errors.chapNum ? ' err' : ''}" id="ichnum" type="number" min="1" placeholder="VD: 1">${App.errors.chapNum ? `<div class="emsg">⚠ ${App.errors.chapNum}</div>` : ''}</div>
+<div class="fg"><label class="fl">Tiêu đề chương</label><input class="fi" id="ichtitle" placeholder="VD: Vụ án đầu tiên"></div></div>`;
+    w.appendChild(ic);
+    w.appendChild(AdminForm.buildSourceCard());
+    w.appendChild(AdminForm.buildPagesCard());
+    const sb = U().mkBtn('btn-primary', '✓ Lưu chương', saveChapter); sb.style.cssText = 'font-size:13px;padding:10px 24px;margin-bottom:40px';
+    w.appendChild(sb); return w;
+  }
+
+  async function saveChapter() {
+    if (App.isSaving) return; App.isSaving = true;
+    const errs = {}, num = parseInt(document.getElementById('ichnum')?.value || '');
+    if (!num || isNaN(num)) errs.chapNum = 'Số chương không được để trống';
+    if (!App.pendingPages.length) errs.pages = 'Chưa có trang nào';
+    if (Object.keys(errs).length) { App.errors = errs; App.isSaving = false; UI.renderContent(); return; }
+    const comicIdx = App.comics.findIndex(c => c.id === App.selComicId);
+    if (comicIdx < 0 && !App.comics.length) { alert('Không tìm thấy truyện'); App.isSaving = false; return; }
+    const cidx = comicIdx >= 0 ? comicIdx : 0;
+    const chapId = 'ch' + Date.now(), title = document.getElementById('ichtitle')?.value || 'Chương ' + num;
+    UI.showLoading('Đang lưu...');
+    const pagesMeta = await AdminForm.persistPages(App.comics[cidx].id, chapId);
+    if (!App.comics[cidx].chapters) App.comics[cidx].chapters = [];
+    App.comics[cidx].chapters.push({ id: chapId, num, title, pages: pagesMeta });
+    App.comics[cidx].chapters.sort((a, b) => a.num - b.num);
+    await DB.saveMeta(); UI.hideLoading(); App.pendingPages = []; App.errors = {}; App.isSaving = false; go('chapters');
+  }
+
+  /* ════ EDIT CHAPTER ═══════════════════════════════════ */
+  function openEditChapter(comicId, chapId) {
+    App.selComicId = comicId;
+    const chap = App.comics.find(c => c.id === comicId)?.chapters?.find(c => c.id === chapId);
+    if (!chap) return;
+    App.pendingPages = chap.pages.map(p => ({
+      id: p.id, note: p.note || '',
+      vi: p.vi ? { ...p.vi, previewURL: p.vi.url || null } : null,
+      en: p.en ? { ...p.en, previewURL: p.en.url || null } : null,
+    }));
+    go('edit-chapter', { editingChapId: chapId });
+    setTimeout(() => loadExistingPreviews(chapId), 80);
+  }
+
+  async function loadExistingPreviews(chapId) {
+    for (const p of App.pendingPages) for (const lang of ['vi', 'en']) {
+      const d = p[lang];
+      if (d?.idb && !d.previewURL) { const url = await DB.getBlobURL(chapId, p.id, lang); if (url) d.previewURL = url; }
+    }
+    AdminForm.refreshTable();
+  }
+
+  function viewEditChapter() {
+    const w = U().div(); w.style.maxWidth = '900px';
+    const comic = App.getComic(), chap = comic?.chapters?.find(c => c.id === App.editingChapId);
+    if (!chap) { w.innerHTML = '<div style="color:#555">Không tìm thấy chương</div>'; return w; }
+    if (Object.keys(App.errors).length) { const eb = U().div('ebanner'); eb.textContent = '⚠ ' + Object.values(App.errors).join(' · '); w.appendChild(eb); }
+
+    const ic = U().div('fc'); ic.innerHTML = '<div class="fct">📑 Thông tin chương</div>';
+    const ir = U().div('fr');
+    const n0 = U().el('input', 'fi'); n0.id = 'ichnum'; n0.type = 'number'; n0.min = '1'; n0.value = chap.num;
+    const t0 = U().el('input', 'fi'); t0.id = 'ichtitle'; t0.value = chap.title || '';
+    const fg1 = U().div('fg'); fg1.innerHTML = '<label class="fl">Số chương *</label>'; fg1.appendChild(n0);
+    const fg2 = U().div('fg'); fg2.innerHTML = '<label class="fl">Tiêu đề chương</label>'; fg2.appendChild(t0);
+    ir.appendChild(fg1); ir.appendChild(fg2); ic.appendChild(ir); w.appendChild(ic);
+
+    // Collapsible "add more"
+    const addMore = U().div('fc');
+    const th2 = U().div(); th2.style.cssText = 'display:flex;align-items:center;justify-content:space-between;cursor:pointer';
+    th2.innerHTML = '<div class="fct" style="margin-bottom:0">📂 Thêm trang mới</div>';
+    const ch2 = U().div(); ch2.style.cssText = 'font-size:12px;color:#555;transition:transform .2s'; ch2.textContent = '▼';
+    th2.appendChild(ch2);
+    const body2 = U().div(); body2.style.display = 'none'; body2.style.marginTop = '14px';
+    const sc2 = AdminForm.buildSourceCard(); sc2.style.cssText = 'margin:0;background:transparent;padding:0;border:none';
+    body2.appendChild(sc2);
+    th2.addEventListener('click', () => { const o = body2.style.display !== 'none'; body2.style.display = o ? 'none' : 'block'; ch2.style.transform = o ? '' : 'rotate(180deg)'; });
+    addMore.appendChild(th2); addMore.appendChild(body2); w.appendChild(addMore);
+    w.appendChild(AdminForm.buildPagesCard());
+
+    const btns = U().div(); btns.style.cssText = 'display:flex;gap:10px;margin-bottom:40px';
+    btns.appendChild(U().mkBtn('btn-primary', '✓ Lưu thay đổi', () => saveEditedChapter(chap)));
+    btns.appendChild(U().mkBtn('btn-ghost', 'Hủy', () => go('chapters')));
+    w.appendChild(btns); return w;
+  }
+
+  async function saveEditedChapter(oldChap) {
+    if (App.isSaving) return; App.isSaving = true;
+    const errs = {}, num = parseInt(document.getElementById('ichnum')?.value || '');
+    if (!num || isNaN(num)) errs.chapNum = 'Số chương không được để trống';
+    if (Object.keys(errs).length) { App.errors = errs; App.isSaving = false; UI.renderContent(); return; }
+    UI.showLoading('Đang lưu...');
+    const comic = App.getComic(), cidx = comic.chapters.findIndex(c => c.id === App.editingChapId);
+    if (cidx < 0) { UI.hideLoading(); App.isSaving = false; return; }
+    const chapId = App.editingChapId, title = document.getElementById('ichtitle')?.value || 'Chương ' + num;
+    const pagesMeta = await AdminForm.persistPages(comic.id, chapId);
+    const newIds = new Set(pagesMeta.map(p => p.id));
+    await AdminForm.deleteRemovedPages(chapId, oldChap.pages, newIds);
+    comic.chapters[cidx] = { id: chapId, num, title, pages: pagesMeta };
+    comic.chapters.sort((a, b) => a.num - b.num);
+    await DB.saveMeta();
+    DB.revokeChap(chapId); PDFModule.invalidateChap(chapId);
+    UI.hideLoading(); App.pendingPages = []; App.errors = {}; App.isSaving = false; go('chapters');
+  }
+
+  /* ════ SETTINGS ═══════════════════════════════════════ */
+  async function viewSettings(container) {
+    const w = U().div(); w.style.maxWidth = '520px';
+    w.innerHTML = '<div style="font-family:monospace;font-size:15px;margin-bottom:16px">Cài đặt hệ thống</div>';
+
+    // Storage usage
+    const usage = await DB.getUsage();
+    if (usage) {
+      const pct = Math.round(usage.usage / usage.quota * 100), color = pct > 80 ? '#e05555' : pct > 50 ? '#e0a030' : '#4caf50';
+      const sb = U().div('storage-bar');
+      sb.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+<div class="storage-track"><div class="storage-fill" style="width:${pct}%;background:${color}"></div></div>
+<div class="storage-label">${fmtBytes(usage.usage)} / ${fmtBytes(usage.quota)} (${pct}%)</div>`;
+      w.appendChild(sb);
+    }
+
+    // GDrive Script URL
+    const gdCard = U().div('sc'); gdCard.style.marginBottom = '12px';
+    gdCard.innerHTML = '<div class="sl" style="margin-bottom:8px">🔗 Google Drive — Apps Script URL</div>';
+    const sRow = U().div(); sRow.style.cssText = 'display:flex;gap:6px;align-items:center';
+    const sInp = U().el('input', 'fi'); sInp.type = 'text'; sInp.placeholder = 'https://script.google.com/macros/s/.../exec';
+    sInp.value = App.gdScriptUrl; sInp.style.cssText = 'flex:1;font-size:11px;padding:7px 10px;font-family:monospace';
+    const sSt = U().div(); sSt.style.display = 'none';
+    const sSave = U().mkBtn('btn-primary btn-xs', 'Lưu', () => {
+      App.gdScriptUrl = sInp.value.trim(); localStorage.setItem('gd_script_url', App.gdScriptUrl);
+      sSt.className = 'gd-status ok'; sSt.textContent = '✓ Đã lưu'; sSt.style.display = 'block'; setTimeout(() => sSt.style.display = 'none', 2500);
+    });
+    const sClear = U().mkBtn('btn-danger btn-xs', 'Xóa', () => {
+      App.gdScriptUrl = ''; localStorage.removeItem('gd_script_url'); sInp.value = '';
+      sSt.className = 'gd-status ok'; sSt.textContent = 'Đã xóa'; sSt.style.display = 'block'; setTimeout(() => sSt.style.display = 'none', 2000);
+    });
+    [sInp, sSave, sClear].forEach(e => sRow.appendChild(e));
+    const sNote = U().div('apikey-note'); sNote.style.marginTop = '6px';
+    sNote.innerHTML = 'Script cần xử lý cả <b>?folderId=</b> (list file) và <b>?fileId=</b> (render PDF). Xem code mẫu trong phần <b>Thêm chương → Import từ Google Drive</b>.';
+    gdCard.appendChild(sRow); gdCard.appendChild(sSt); gdCard.appendChild(sNote);
+
+    // ── Lưu trữ dữ liệu ──
+    const storeCard = U().div('sc'); storeCard.style.marginBottom = '12px';
+    storeCard.innerHTML = '<div class="sl" style="margin-bottom:8px">💾 Lưu trữ dữ liệu</div>';
+    const storeInfo = U().div(); storeInfo.style.cssText='font-size:11px;color:#666;line-height:1.8;margin-bottom:10px';
+    storeInfo.innerHTML = `Toàn bộ dữ liệu (metadata truyện + trang ảnh + nội dung truyện chữ) được lưu trong
+<b style="color:#888">IndexedDB</b> của trình duyệt — không cần server, không upload lên internet.<br>
+<span style="color:#555">⚠ Xóa cache/dữ liệu trình duyệt sẽ mất toàn bộ dữ liệu. Dùng Export để backup định kỳ.</span>`;
+    storeCard.appendChild(storeInfo);
+
+    // Export / Import buttons
+    const ioRow = U().div(); ioRow.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+
+    // Export JSON toàn bộ metadata + text chapters
+    const expBtn = U().mkBtn('btn-ghost btn-xs', '📤 Export JSON', async () => {
+      expBtn.disabled=true; expBtn.textContent='Đang xuất...';
+      try {
+        const textChaps = [];
+        for (const comic of App.comics) {
+          for (const ch of (comic.chapters||[])) {
+            if (ch.type==='text') {
+              const data = await DB.getTextChap(ch.id);
+              if (data) textChaps.push(data);
+            }
+          }
+        }
+        const blob = new Blob([JSON.stringify({
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          comics: App.comics,
+          textChaps,
+        }, null, 2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href=url; a.download=`mangadesk-backup-${new Date().toISOString().slice(0,10)}.json`;
+        a.click(); URL.revokeObjectURL(url);
+      } catch(e) { alert('Lỗi export: '+e.message); }
+      expBtn.disabled=false; expBtn.textContent='📤 Export JSON';
+    });
+
+    // Import JSON
+    const impWrap = U().div('uic');
+    const impBtn  = U().el('button','btn btn-ghost btn-xs'); impBtn.textContent='📥 Import JSON';
+    const impFile = U().el('input'); impFile.type='file'; impFile.accept='.json';
+    impFile.addEventListener('change', async () => {
+      const f = impFile.files[0]; if (!f) return;
+      if (!confirm(`Import từ "${f.name}"? Dữ liệu hiện tại sẽ được GỘP (không xóa).`)) { impFile.value=''; return; }
+      UI.showLoading('Đang import...');
+      try {
+        const text = await f.text();
+        const bk   = JSON.parse(text);
+        if (!bk.comics) throw new Error('File không hợp lệ (thiếu comics)');
+        // Merge comics
+        for (const comic of bk.comics) {
+          if (!App.comics.find(c=>c.id===comic.id)) App.comics.push(comic);
+        }
+        // Restore text chapters
+        for (const tc of (bk.textChaps||[])) {
+          await DB.saveTextChap(tc.chapId, tc);
+        }
+        await DB.saveMeta();
+        UI.hideLoading(); alert(`✓ Import xong! ${bk.comics.length} truyện, ${bk.textChaps?.length||0} chương chữ.`);
+        go('library');
+      } catch(e) { UI.hideLoading(); alert('Lỗi import: '+e.message); }
+      impFile.value='';
+    });
+    impWrap.appendChild(impBtn); impWrap.appendChild(impFile);
+
+    const noteImp = U().div(); noteImp.style.cssText='font-size:10px;color:#555;margin-top:6px;line-height:1.6';
+    noteImp.innerHTML='<b>Export</b>: lưu metadata + nội dung truyện chữ (không gồm file ảnh/PDF đã upload).<br><b>Import</b>: gộp vào dữ liệu hiện tại, không ghi đè.';
+
+    [expBtn, impWrap].forEach(e=>ioRow.appendChild(e));
+    storeCard.appendChild(ioRow); storeCard.appendChild(noteImp);
+
+    // Phiên bản
+    const verCard = U().div('sc'); verCard.style.marginBottom = '10px';
+    verCard.innerHTML = '<div class="sl">Phiên bản</div><div style="font-size:12px;margin-top:4px">MangaDesk v1.2</div>';
+
+    const delBtn = U().mkBtn('btn-danger', '🗑 Xóa toàn bộ dữ liệu', async () => {
+      if (!confirm('Xóa toàn bộ? Không thể hoàn tác.')) return;
+      UI.showLoading('Đang xóa...');
+      await DB.clearAll(); App.comics = []; UI.hideLoading(); go('library');
+    });
+
+    w.appendChild(gdCard);
+    w.appendChild(storeCard);
+    w.appendChild(verCard);
+    w.appendChild(delBtn);
+    container.appendChild(w);
+  }
+
+  return { viewLibrary, viewAddComic, viewChapters, viewAddChapter, viewEditChapter, viewSettings };
+})();
