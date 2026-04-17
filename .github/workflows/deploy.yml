@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # cho phép chạy thủ công từ Actions tab
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,15 +25,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Tạo js/config.js từ GitHub Secrets
-      # config.js không có trong repo (đã gitignore)
-      # Secrets được inject an toàn tại build time
+      # Dùng printf thay vì heredoc để tránh lỗi khi secret có ký tự đặc biệt (/, &, ')
       - name: Create config.js from secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON: ${{ secrets.SUPABASE_ANON }}
         run: |
-          cat > js/config.js << 'EOF'
-          window.SUPABASE_URL  = '${{ secrets.SUPABASE_URL }}';
-          window.SUPABASE_ANON = '${{ secrets.SUPABASE_ANON }}';
-          EOF
+          printf 'window.SUPABASE_URL  = "%s";\nwindow.SUPABASE_ANON = "%s";\n' \
+            "$SUPABASE_URL" "$SUPABASE_ANON" > js/config.js
+          echo "✓ config.js created ($(wc -c < js/config.js) bytes)"
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
