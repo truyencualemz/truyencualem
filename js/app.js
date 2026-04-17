@@ -88,11 +88,32 @@ function buildContent() {
 async function init() {
   UI.showLoading('Đang khởi động...');
 
-  // 1. Khởi tạo Supabase client
-  window._sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON);
+  // 1. Kiểm tra config.js đã được load chưa
+  if (!window.SUPABASE_URL || window.SUPABASE_URL.includes('YOUR_PROJECT_ID')
+   || !window.SUPABASE_ANON || window.SUPABASE_ANON.includes('YOUR_ANON_KEY')) {
+    UI.hideLoading();
+    showConfigError();
+    return;
+  }
 
-  // 2. Kiểm tra session
-  const user = await Auth.init();
+  // 2. Khởi tạo Supabase client
+  try {
+    window._sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON);
+  } catch(e) {
+    UI.hideLoading();
+    showConfigError('Không thể khởi tạo Supabase: ' + e.message);
+    return;
+  }
+
+  // 3. Kiểm tra session
+  let user;
+  try {
+    user = await Auth.init();
+  } catch(e) {
+    UI.hideLoading();
+    showConfigError('Lỗi kết nối Supabase: ' + e.message);
+    return;
+  }
 
   if (!user) {
     UI.hideLoading();
@@ -100,7 +121,7 @@ async function init() {
     return;
   }
 
-  // 3. Load dữ liệu
+  // 4. Load dữ liệu
   try {
     await DB.loadMeta();
   } catch(e) {
@@ -109,4 +130,38 @@ async function init() {
 
   UI.hideLoading();
   UI.renderAll();
+}
+
+/* Hiển thị hướng dẫn khi config.js chưa được thiết lập */
+function showConfigError(extraMsg) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:#0f0f11;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `
+<div style="max-width:480px;width:100%;background:#18181c;border:1px solid #2a2a30;border-radius:12px;padding:32px 28px">
+  <div style="font-family:monospace;font-size:13px;color:#c8a96e;letter-spacing:2px;margin-bottom:4px">MANGADESK</div>
+  <div style="font-size:11px;color:#444;margin-bottom:24px">Cấu hình chưa hoàn tất</div>
+
+  <div style="background:#2a1515;border:1px solid #5a2020;border-radius:8px;padding:12px 16px;font-size:12px;color:#e05555;margin-bottom:20px">
+    ⚠ File <code style="background:#1a0a0a;padding:1px 5px;border-radius:3px">js/config.js</code> không tìm thấy hoặc chưa được điền.
+    ${extraMsg ? '<br><span style="color:#c04040;font-size:11px">' + extraMsg + '</span>' : ''}
+  </div>
+
+  <div style="font-size:12px;color:#888;line-height:1.9">
+    <b style="color:#aaa">Nếu dùng GitHub Pages + GitHub Actions:</b><br>
+    1. Vào repo → <b style="color:#ccc">Settings → Secrets → Actions</b><br>
+    2. Thêm 2 secrets: <code style="background:#1a1a1e;padding:1px 5px;border-radius:3px;color:#9ae">SUPABASE_URL</code>
+       và <code style="background:#1a1a1e;padding:1px 5px;border-radius:3px;color:#9ae">SUPABASE_ANON</code><br>
+    3. Vào tab <b style="color:#ccc">Actions → chọn workflow → Re-run all jobs</b><br>
+    <br>
+    <b style="color:#aaa">Nếu chạy local:</b><br>
+    Copy file <code style="background:#1a1a1e;padding:1px 5px;border-radius:3px;color:#9ae">js/config.example.js</code>
+    → đổi tên thành <code style="background:#1a1a1e;padding:1px 5px;border-radius:3px;color:#9ae">js/config.js</code>
+    → điền URL và anon key từ Supabase Dashboard.
+  </div>
+
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #2a2a30;font-size:11px;color:#555">
+    Supabase Dashboard → Project Settings → API → Project URL + anon key
+  </div>
+</div>`;
+  document.body.appendChild(overlay);
 }
