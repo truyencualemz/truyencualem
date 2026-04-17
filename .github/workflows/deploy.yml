@@ -1,0 +1,28 @@
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Tạo config.js từ GitHub Secrets (không lưu trong code)
+      - name: Create config.js
+        run: |
+          cat > js/config.js << EOF
+          window.SUPABASE_URL  = '${{ secrets.SUPABASE_URL }}';
+          window.SUPABASE_ANON = '${{ secrets.SUPABASE_ANON }}';
+          EOF
+
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - uses: actions/deploy-pages@v4
