@@ -1,0 +1,6 @@
+# Supabase credentials — không commit lên repo
+js/config.js
+
+# OS
+.DS_Store
+Thumbs.db
