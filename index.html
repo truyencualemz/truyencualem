@@ -35,7 +35,13 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',system-ui,s
 .btn-danger{background:transparent;border:1px solid #3a2020;color:#e05555}.btn-danger:not(:disabled):hover{background:#3a2020}
 .btn-sm{padding:5px 11px;font-size:11px}.btn-xs{padding:3px 8px;font-size:10px}.btn-xxs{padding:2px 5px;font-size:9px}
 
-/* ── Stats / Cards ── */
+/* ── Library search toolbar ── */
+#lib-toolbar select.fi{background:#111}
+#lib-toolbar .fi:focus{border-color:#c8a96e}
+#lib-search{transition:border-color .15s}
+#lib-search:focus{border-color:#c8a96e}
+
+/* ── Stats ── */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
 .sc{background:#18181c;border:1px solid #2a2a30;border-radius:8px;padding:12px 14px}
 .sv{font-family:monospace;font-size:20px;color:#c8a96e}
