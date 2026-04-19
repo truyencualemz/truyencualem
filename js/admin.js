@@ -8,37 +8,187 @@ window.Admin = (() => {
   const fmtBytes = b => b < 1024**2 ? (b/1024).toFixed(0)+'KB' : b < 1024**3 ? (b/1024**2).toFixed(1)+'MB' : (b/1024**3).toFixed(1)+'GB';
 
   /* ════ LIBRARY ════════════════════════════════════════ */
+
+  // Trạng thái tìm kiếm/lọc — giữ nguyên khi re-render
+  const LibState = { q: '', genre: 'all', status: 'all', sort: 'title' };
+
+  const GENRES = [
+    ['all','Tất cả thể loại'],
+    ['action','Hành động'],
+    ['romance','Tình cảm'],
+    ['comedy','Hài hước'],
+    ['mystery','Trinh thám'],
+    ['fantasy','Kỳ ảo'],
+  ];
+
+  function filterComics() {
+    let list = App.comics.slice();
+    // Tìm kiếm
+    const q = LibState.q.toLowerCase().trim();
+    if (q) list = list.filter(m =>
+      m.titleVI?.toLowerCase().includes(q) ||
+      m.titleEN?.toLowerCase().includes(q) ||
+      m.descVI?.toLowerCase().includes(q)
+    );
+    // Lọc thể loại
+    if (LibState.genre !== 'all') list = list.filter(m => m.genre === LibState.genre);
+    // Lọc trạng thái
+    if (LibState.status !== 'all') list = list.filter(m => m.status === LibState.status);
+    // Sắp xếp
+    list.sort((a, b) => {
+      if (LibState.sort === 'title')   return (a.titleVI||'').localeCompare(b.titleVI||'');
+      if (LibState.sort === 'chapters') return (b.chapters?.length||0) - (a.chapters?.length||0);
+      if (LibState.sort === 'order')   return (a._order||0) - (b._order||0);
+      return 0;
+    });
+    return list;
+  }
+
   function viewLibrary() {
     const w = U().div();
+
+    // Stats bar
     const sg = U().div('stats');
     [[App.comics.length,'Tổng truyện'],
      [App.comics.reduce((a,x)=>a+(x.chapters?.length||0),0),'Tổng chương'],
      [App.comics.filter(x=>x.status==='published').length,'Công khai'],
-     [2,'Ngôn ngữ']].forEach(([v,l]) => {
+     [new Set(App.comics.flatMap(x=>x.chapters?.flatMap(c=>c.languages||[])||[])).size || 2,'Ngôn ngữ'],
+    ].forEach(([v,l]) => {
       sg.innerHTML += `<div class="sc"><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
     });
     w.appendChild(sg);
-    const h = U().div(); h.style.cssText = 'font-family:monospace;font-size:15px;margin-bottom:13px'; h.textContent = 'Tất cả truyện';
-    w.appendChild(h);
+
+    // ── Thanh tìm kiếm + bộ lọc ──
+    const toolbar = U().div(); toolbar.id = 'lib-toolbar';
+    toolbar.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px';
+
+    // Search input
+    const searchWrap = U().div(); searchWrap.style.cssText = 'position:relative;flex:1;min-width:160px';
+    const searchIcon = U().div(); searchIcon.style.cssText = 'position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#555;pointer-events:none;font-size:13px'; searchIcon.textContent = '🔍';
+    const searchInp = U().el('input','fi'); searchInp.id='lib-search'; searchInp.placeholder='Tìm tên truyện...'; searchInp.value = LibState.q;
+    searchInp.style.cssText = 'padding-left:30px;font-size:12px';
+    searchInp.addEventListener('input', () => { LibState.q = searchInp.value; refreshGrid(w); });
+    searchWrap.appendChild(searchIcon); searchWrap.appendChild(searchInp);
+    toolbar.appendChild(searchWrap);
+
+    // Genre filter
+    const genreSel = U().el('select','fi'); genreSel.style.cssText = 'width:auto;font-size:12px;padding:7px 10px';
+    GENRES.forEach(([v,l]) => { const o = U().el('option'); o.value=v; o.textContent=l; if(v===LibState.genre)o.selected=true; genreSel.appendChild(o); });
+    genreSel.addEventListener('change', () => { LibState.genre = genreSel.value; refreshGrid(w); });
+    toolbar.appendChild(genreSel);
+
+    // Status filter
+    const statusSel = U().el('select','fi'); statusSel.style.cssText = 'width:auto;font-size:12px;padding:7px 10px';
+    [['all','Tất cả'],['published','Công khai'],['draft','Nháp']].forEach(([v,l]) => {
+      const o = U().el('option'); o.value=v; o.textContent=l; if(v===LibState.status)o.selected=true; statusSel.appendChild(o);
+    });
+    statusSel.addEventListener('change', () => { LibState.status = statusSel.value; refreshGrid(w); });
+    toolbar.appendChild(statusSel);
+
+    // Sort
+    const sortSel = U().el('select','fi'); sortSel.style.cssText = 'width:auto;font-size:12px;padding:7px 10px';
+    [['title','Sắp xếp: Tên'],['chapters','Sắp xếp: Nhiều chương'],['order','Sắp xếp: Mặc định']].forEach(([v,l]) => {
+      const o = U().el('option'); o.value=v; o.textContent=l; if(v===LibState.sort)o.selected=true; sortSel.appendChild(o);
+    });
+    sortSel.addEventListener('change', () => { LibState.sort = sortSel.value; refreshGrid(w); });
+    toolbar.appendChild(sortSel);
+
+    // Clear filters button (chỉ hiện khi có filter)
+    if (LibState.q || LibState.genre !== 'all' || LibState.status !== 'all') {
+      const clearBtn = U().mkBtn('btn-ghost btn-xs','✕ Xóa bộ lọc', () => {
+        LibState.q=''; LibState.genre='all'; LibState.status='all';
+        UI.renderContent();
+      });
+      toolbar.appendChild(clearBtn);
+    }
+    w.appendChild(toolbar);
+
+    // Grid container — rebuilt by refreshGrid
+    const gridWrap = U().div(); gridWrap.id = 'lib-grid'; w.appendChild(gridWrap);
+    buildGrid(gridWrap);
+    return w;
+  }
+
+  function refreshGrid(w) {
+    const old = document.getElementById('lib-grid');
+    if (!old) return;
+    const newWrap = U().div(); newWrap.id = 'lib-grid';
+    buildGrid(newWrap);
+    old.replaceWith(newWrap);
+
+    // Update clear button visibility
+    const toolbar = document.getElementById('lib-toolbar');
+    if (toolbar) {
+      const existing = toolbar.querySelector('.clear-btn');
+      if (existing) existing.remove();
+      if (LibState.q || LibState.genre !== 'all' || LibState.status !== 'all') {
+        const clearBtn = U().mkBtn('btn-ghost btn-xs clear-btn','✕ Xóa bộ lọc',() => {
+          LibState.q=''; LibState.genre='all'; LibState.status='all';
+          const si = document.getElementById('lib-search'); if(si) si.value='';
+          refreshGrid(null);
+          // also update dropdowns
+          toolbar.querySelectorAll('select').forEach(s => {
+            if(s===toolbar.querySelectorAll('select')[0]) s.value='all';
+            if(s===toolbar.querySelectorAll('select')[1]) s.value='all';
+          });
+        });
+        toolbar.appendChild(clearBtn);
+      }
+    }
+  }
+
+  function buildGrid(container) {
+    const list = filterComics();
+    const resultInfo = U().div(); resultInfo.style.cssText = 'font-size:11px;color:#555;margin-bottom:10px';
+    const total = App.comics.length;
+    if (LibState.q || LibState.genre !== 'all' || LibState.status !== 'all') {
+      resultInfo.textContent = `${list.length} / ${total} truyện`;
+    } else {
+      resultInfo.textContent = `${total} truyện`;
+    }
+    container.appendChild(resultInfo);
+
+    if (!list.length) {
+      const empty = U().div(); empty.style.cssText = 'text-align:center;padding:48px 20px;color:#555;font-size:13px';
+      empty.innerHTML = LibState.q
+        ? `Không tìm thấy truyện nào với từ khóa "<b style="color:#888">${U().esc(LibState.q)}</b>"`
+        : 'Không có truyện nào khớp bộ lọc.';
+      container.appendChild(empty);
+    }
+
     const grid = U().div('cg');
-    App.comics.forEach(m => {
+    list.forEach(m => {
       const card = U().div('cc');
+      const chapCount = m.chapters?.length || 0;
+      const textChaps = m.chapters?.filter(c=>c.type==='text').length || 0;
+      const genreLabel = GENRES.find(g=>g[0]===m.genre)?.[1] || m.genre || '';
+      // Highlight search term in title
+      const titleVI = LibState.q
+        ? U().esc(m.titleVI).replace(new RegExp(`(${U().esc(LibState.q)})`, 'gi'), '<mark style="background:#c8a96e33;color:#c8a96e;border-radius:2px">$1</mark>')
+        : U().esc(m.titleVI);
       card.innerHTML = `<div class="ct">${m.cover
         ? `<img src="${m.cover}" alt="" loading="lazy">`
         : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`
       }</div>
 <div class="ci">
-  <div class="cvi">${U().esc(m.titleVI)}</div>
+  <div class="cvi">${titleVI}</div>
   <div class="cen">${U().esc(m.titleEN)||'—'}</div>
-  <div class="cm"><span class="badge ${m.status==='published'?'bok':'bdr'}">${m.status==='published'?'Công khai':'Nháp'}</span><span>${m.chapters?.length||0} ch</span></div>
+  <div class="cm">
+    <span class="badge ${m.status==='published'?'bok':'bdr'}">${m.status==='published'?'Công khai':'Nháp'}</span>
+    ${genreLabel ? `<span class="badge" style="background:#1e1e24;color:#777;border:1px solid #2a2a30">${genreLabel}</span>` : ''}
+    <span>${chapCount} ch${textChaps>0?` · ${textChaps} chữ`:''}</span>
+  </div>
 </div>`;
       card.addEventListener('click', () => go('chapters', { selComicId: m.id }));
       grid.appendChild(card);
     });
+
+    // Add new button
     const ac = U().div('add-cc');
     ac.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg><span>Thêm truyện</span>`;
     ac.addEventListener('click', () => { App.coverData = null; go('add-comic'); });
-    grid.appendChild(ac); w.appendChild(grid); return w;
+    grid.appendChild(ac);
+    container.appendChild(grid);
   }
 
   /* ════ ADD / EDIT COMIC ═══════════════════════════════ */
