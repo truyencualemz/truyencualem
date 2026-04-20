@@ -177,9 +177,11 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
       </a>
     </div>
     <div id="header-right">
-      <span class="user-email" id="user-email"></span>
+      <button class="btn btn-ghost btn-xs" id="profile-btn" style="display:flex;align-items:center;gap:6px">
+        <span style="width:22px;height:22px;border-radius:50%;background:#2a2a30;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0" id="user-avatar">?</span>
+        <span id="user-display-name" style="font-size:11px;color:#888;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      </button>
       <a href="index.html" class="btn btn-ghost btn-xs">⚙ Admin</a>
-      <button class="btn btn-ghost btn-xs" id="signout-btn">Đăng xuất</button>
     </div>
   </div>
 
