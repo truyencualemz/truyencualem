@@ -166,7 +166,8 @@ window.TextReader = (() => {
 
   /* Dropdown chỉ ảnh hưởng tooltipLangs — không rebuild cột */
   function buildTooltipDropdown(allLangs) {
-    const dw = UI.div(); dw.style.cssText = 'position:relative;display:inline-block;flex-shrink:0';
+    const dw = UI.div();
+    dw.style.cssText = 'position:relative;display:inline-block;flex-shrink:0;z-index:50';
 
     const trigger = UI.el('button', 'btn btn-ghost btn-xs');
     trigger.style.cssText = 'min-width:130px;justify-content:space-between;gap:6px;font-size:11px';
@@ -187,40 +188,27 @@ window.TextReader = (() => {
     }
     refreshTrigger();
 
-    /* Panel dùng position:fixed để thoát khỏi overflow:auto của tbar-langs */
+    // Panel: position:absolute bên trong dw
+    // tbar-langs không có overflow:hidden nên không bị clip
     const panel = UI.div();
     panel.style.cssText = [
-      'display:none;position:fixed;z-index:1000',
+      'display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999',
       'background:#1a1a1e;border:1px solid #3a3a44;border-radius:8px;padding:8px',
-      'min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.7)',
+      'min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.8)',
     ].join('');
-    document.body.appendChild(panel); // gắn vào body, không phải dw
-
-    function positionPanel() {
-      const r = trigger.getBoundingClientRect();
-      // Hiện phía dưới trigger, căn trái
-      let left = r.left;
-      let top  = r.bottom + 5;
-      // Tránh vượt right edge
-      const panelW = 190;
-      if (left + panelW > window.innerWidth - 8) left = window.innerWidth - panelW - 8;
-      panel.style.left = left + 'px';
-      panel.style.top  = top  + 'px';
-    }
 
     const phint = document.createElement('div');
     phint.style.cssText = 'font-size:10px;color:#555;margin-bottom:8px;padding:0 2px';
-    phint.textContent = 'Ngôn ngữ hiện trong tooltip khi hover từ'; panel.appendChild(phint);
+    phint.textContent = 'Ngôn ngữ hiện trong tooltip khi hover từ';
+    panel.appendChild(phint);
 
-    /* Nút Tất cả */
     const allRow = UI.el('label');
     allRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;font-size:11px;color:#888;user-select:none;border-bottom:1px solid #2a2a30;margin-bottom:4px;padding-bottom:9px';
-    allRow.addEventListener('mouseenter', () => allRow.style.background='#222226');
-    allRow.addEventListener('mouseleave', () => allRow.style.background='');
-    const allCb = UI.el('input'); allCb.type='checkbox'; allCb.style.accentColor='#c8a96e';
+    allRow.addEventListener('mouseenter', () => { allRow.style.background = '#222226'; });
+    allRow.addEventListener('mouseleave', () => { allRow.style.background = ''; });
+    const allCb = UI.el('input'); allCb.type = 'checkbox'; allCb.style.accentColor = '#c8a96e';
     allCb.checked = tooltipLangs.length === allLangs.length;
     const indivCbs = [];
-
     allCb.addEventListener('change', () => {
       tooltipLangs = allCb.checked ? allLangs.slice() : [];
       indivCbs.forEach(c => { c.checked = allCb.checked; });
@@ -230,22 +218,20 @@ window.TextReader = (() => {
     allRow.appendChild(document.createTextNode('  ✓ Tất cả ngôn ngữ'));
     panel.appendChild(allRow);
 
-    /* Từng ngôn ngữ */
     allLangs.forEach(lang => {
       const row = UI.el('label');
       row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:5px;cursor:pointer;font-size:12px;user-select:none';
-      row.addEventListener('mouseenter', () => row.style.background='#222226');
-      row.addEventListener('mouseleave', () => row.style.background='');
-      const cb = UI.el('input'); cb.type='checkbox'; cb.style.accentColor='#c8a96e';
+      row.addEventListener('mouseenter', () => { row.style.background = '#222226'; });
+      row.addEventListener('mouseleave', () => { row.style.background = ''; });
+      const cb = UI.el('input'); cb.type = 'checkbox'; cb.style.accentColor = '#c8a96e';
       cb.checked = tooltipLangs.includes(lang);
       indivCbs.push(cb);
       const meta = Translate.getLangMeta(lang);
-      const flag = document.createElement('span'); flag.textContent = meta.flag; flag.style.fontSize='15px';
-      const name = document.createElement('span'); name.textContent = meta.label; name.style.color='#ccc';
-
+      const flag = document.createElement('span'); flag.textContent = meta.flag; flag.style.fontSize = '15px';
+      const name = document.createElement('span'); name.textContent = meta.label; name.style.color = '#ccc';
       cb.addEventListener('change', () => {
         if (cb.checked) { if (!tooltipLangs.includes(lang)) tooltipLangs.push(lang); }
-        else             { tooltipLangs = tooltipLangs.filter(l => l !== lang); }
+        else { tooltipLangs = tooltipLangs.filter(l => l !== lang); }
         allCb.checked = tooltipLangs.length === allLangs.length;
         allCb.indeterminate = tooltipLangs.length > 0 && tooltipLangs.length < allLangs.length;
         refreshTrigger();
@@ -259,30 +245,43 @@ window.TextReader = (() => {
     note.textContent = 'Thay đổi có hiệu lực ngay.';
     panel.appendChild(note);
 
-    /* Toggle — dùng fixed positioning */
     let isOpen = false;
     trigger.addEventListener('click', e => {
       e.stopPropagation();
       isOpen = !isOpen;
-      if (isOpen) { positionPanel(); panel.style.display = 'block'; }
-      else          panel.style.display = 'none';
+      if (isOpen) {
+        panel.style.display = 'block';
+        // Điều chỉnh nếu panel tràn sang phải
+        const r = dw.getBoundingClientRect();
+        if (r.left + 190 > window.innerWidth - 8) {
+          panel.style.left = 'auto'; panel.style.right = '0';
+        } else {
+          panel.style.left = '0'; panel.style.right = 'auto';
+        }
+      } else {
+        panel.style.display = 'none';
+      }
     });
-    // Cleanup panel khi reader đóng
+
+    // Đóng khi click ra ngoài dw (dw chứa cả trigger lẫn panel)
     const onOutside = (e) => {
-      // Chỉ đóng khi click ra ngoài cả trigger lẫn panel
-      if (panel.contains(e.target) || trigger.contains(e.target)) return;
-      isOpen = false; panel.style.display = 'none';
+      if (dw.contains(e.target)) return;
+      isOpen = false;
+      panel.style.display = 'none';
     };
-    const cleanup = () => { panel.remove(); document.removeEventListener('click', onOutside); };
     document.addEventListener('click', onOutside);
 
-    // Khi reader re-render, panel cũ vẫn còn trong body → cleanup khi trigger bị remove
-    const observer = new MutationObserver(() => {
-      if (!document.contains(trigger)) { cleanup(); observer.disconnect(); }
+    // Cleanup listener khi reader bị xóa
+    const mo = new MutationObserver(() => {
+      if (!document.contains(dw)) {
+        document.removeEventListener('click', onOutside);
+        mo.disconnect();
+      }
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    mo.observe(document.getElementById('reader') || document.body, { childList: true });
 
     dw.appendChild(trigger);
+    dw.appendChild(panel);
     return dw;
   }
 
@@ -404,11 +403,8 @@ window.TextReader = (() => {
     els.forEach(el=>el.addEventListener('scroll',()=>syncTo(el,els.filter(e=>e!==el)),{passive:true}));
   }
 
-  // Click outside to hide tooltip — bỏ qua click trong dropdown panel
-  document.addEventListener('click', (e) => {
-    const panel = document.getElementById('tip-lang-panel');
-    if (panel && panel.contains(e.target)) return;
-    hideTooltip();
-  });
+  // Click ngoài → ẩn annotation tooltip
+  // (dropdown panel giờ nằm trong dw.contains() nên tự xử lý)
+  document.addEventListener('click', hideTooltip);
   return { open, close };
 })();
