@@ -268,8 +268,12 @@ window.TextReader = (() => {
       else          panel.style.display = 'none';
     });
     // Cleanup panel khi reader đóng
+    const onOutside = (e) => {
+      // Chỉ đóng khi click ra ngoài cả trigger lẫn panel
+      if (panel.contains(e.target) || trigger.contains(e.target)) return;
+      isOpen = false; panel.style.display = 'none';
+    };
     const cleanup = () => { panel.remove(); document.removeEventListener('click', onOutside); };
-    const onOutside = () => { isOpen=false; panel.style.display='none'; };
     document.addEventListener('click', onOutside);
 
     // Khi reader re-render, panel cũ vẫn còn trong body → cleanup khi trigger bị remove
@@ -400,6 +404,11 @@ window.TextReader = (() => {
     els.forEach(el=>el.addEventListener('scroll',()=>syncTo(el,els.filter(e=>e!==el)),{passive:true}));
   }
 
-  document.addEventListener('click', hideTooltip);
+  // Click outside to hide tooltip — bỏ qua click trong dropdown panel
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('tip-lang-panel');
+    if (panel && panel.contains(e.target)) return;
+    hideTooltip();
+  });
   return { open, close };
 })();
