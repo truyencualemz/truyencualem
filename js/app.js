@@ -39,6 +39,11 @@ function buildNav() {
   });
 
   nav.appendChild(Object.assign(UI.div('ns'), { textContent: 'Hệ thống' }));
+
+  const an = UI.div('nv'+(App.view==='analytics'?' active':''));
+  an.innerHTML = `<svg class="nic" viewBox="0 0 16 16" fill="currentColor"><path d="M0 13h1V6h3v7h1V4h3v9h1V8h3v5h1v1H0z"/></svg>Thống kê`;
+  an.addEventListener('click', () => App.go('analytics')); nav.appendChild(an);
+
   const si = UI.div('nv'+(App.view==='settings'?' active':''));
   si.innerHTML = `<svg class="nic" viewBox="0 0 16 16" fill="currentColor"><path d="M7 1a1 1 0 0 0-1 1v.5A5.5 5.5 0 0 0 4.6 3.08l-.35-.35a1 1 0 1 0-1.42 1.42l.35.35A5.5 5.5 0 0 0 2.5 6H2a1 1 0 0 0 0 2h.5c.09.5.25.97.48 1.4l-.35.35a1 1 0 1 0 1.42 1.42l.35-.35c.43.23.9.39 1.4.48V12a1 1 0 0 0 2 0v-.5c.5-.09.97-.25 1.4-.48l.35.35a1 1 0 1 0 1.42-1.42l-.35-.35c.23-.43.39-.9.48-1.4H12a1 1 0 0 0 0-2h-.5a5.5 5.5 0 0 0-.48-1.4l.35-.35a1 1 0 1 0-1.42-1.42l-.35.35A5.5 5.5 0 0 0 8 2.5V2a1 1 0 0 0-1-1zm0 4a3 3 0 1 1 0 6A3 3 0 0 1 7 5z"/></svg>Cài đặt`;
   si.addEventListener('click', () => App.go('settings')); nav.appendChild(si);
@@ -80,6 +85,7 @@ function buildContent() {
     case 'edit-chapter':       c.appendChild(Admin.viewEditChapter()); break;
     case 'add-text-chapter':   c.appendChild(TextEditor.buildForm(false)); break;
     case 'edit-text-chapter':  c.appendChild(TextEditor.buildForm(true));  break;
+    case 'analytics':          Admin.viewAnalytics(c);                break;
     case 'settings':           Admin.viewSettings(c);                  break;
   }
 }

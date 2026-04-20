@@ -557,5 +557,68 @@ window.Admin = (() => {
     container.appendChild(w);
   }
 
-  return { viewLibrary, viewAddComic, viewChapters, viewAddChapter, viewEditChapter, viewSettings };
+  /* ════ ANALYTICS ══════════════════════════════════════ */
+  async function viewAnalytics(container) {
+    const w = U().div(); w.style.maxWidth = '640px';
+    w.innerHTML = '<div style="font-family:monospace;font-size:15px;margin-bottom:16px">📊 Thống kê người dùng</div>';
+    UI.showLoading('Đang tải thống kê...');
+    try {
+      const [stats, users] = await Promise.all([
+        UserDB.getReadingStats(),
+        UserDB.getUserList(),
+      ]);
+      UI.hideLoading();
+
+      // User activity summary
+      const ua = U().div('sc'); ua.style.marginBottom = '14px';
+      ua.innerHTML = `<div class="sl" style="margin-bottom:10px">👥 Hoạt động người đọc</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+  <div style="text-align:center"><div style="font-size:20px;font-family:monospace;color:#c8a96e">${users.length}</div><div style="font-size:10px;color:#555;margin-top:3px">Người đọc</div></div>
+  <div style="text-align:center"><div style="font-size:20px;font-family:monospace;color:#c8a96e">${users.reduce((a,u)=>a+u.reads,0)}</div><div style="font-size:10px;color:#555;margin-top:3px">Lượt đọc</div></div>
+  <div style="text-align:center"><div style="font-size:20px;font-family:monospace;color:#c8a96e">${stats.length}</div><div style="font-size:10px;color:#555;margin-top:3px">Truyện được đọc</div></div>
+</div>`;
+      w.appendChild(ua);
+
+      // Top comics
+      if (stats.length) {
+        const tc = U().div('sc'); tc.style.marginBottom = '14px';
+        tc.innerHTML = '<div class="sl" style="margin-bottom:10px">🔥 Truyện được đọc nhiều nhất</div>';
+        stats.slice(0, 5).forEach((s, i) => {
+          const row = U().div(); row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #1a1a1e';
+          const rank = U().div(); rank.style.cssText = 'font-family:monospace;font-size:12px;color:#555;min-width:20px'; rank.textContent = `${i+1}.`;
+          const name = U().div(); name.style.cssText = 'flex:1;font-size:12px'; name.textContent = s.comic?.title_vi || s.comic?.titleVI || s.comic?.id || '?';
+          const cnt  = U().div(); cnt.style.cssText = 'font-size:11px;color:#c8a96e;font-family:monospace'; cnt.textContent = s.count + ' lượt';
+          [rank, name, cnt].forEach(e => row.appendChild(e));
+          tc.appendChild(row);
+        });
+        w.appendChild(tc);
+      }
+
+      // Recent users
+      if (users.length) {
+        const ru = U().div('sc'); ru.style.marginBottom = '14px';
+        ru.innerHTML = '<div class="sl" style="margin-bottom:10px">🕐 Hoạt động gần đây</div>';
+        users.slice(0, 5).forEach(u => {
+          const row = U().div(); row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a1a1e;font-size:11px';
+          const uid = U().div(); uid.style.cssText = 'font-family:monospace;color:#666;font-size:10px'; uid.textContent = u.id.slice(0,8)+'...';
+          const meta = U().div(); meta.style.color='#555';
+          const d = new Date(u.lastActive);
+          meta.textContent = `${u.reads} lượt · ${d.toLocaleDateString('vi-VN')}`;
+          [uid, meta].forEach(e => row.appendChild(e));
+          ru.appendChild(row);
+        });
+        w.appendChild(ru);
+      }
+
+      if (!stats.length && !users.length) {
+        w.innerHTML += '<div style="color:#555;font-size:12px;padding:20px 0">Chưa có dữ liệu người đọc.</div>';
+      }
+    } catch(e) {
+      UI.hideLoading();
+      w.innerHTML += `<div style="color:#e05555;font-size:12px">Lỗi tải thống kê: ${e.message}<br><span style="color:#555;font-size:11px">Cần chạy file data/supabase-user-schema.sql trong Supabase SQL Editor.</span></div>`;
+    }
+    container.appendChild(w);
+  }
+
+  return { viewLibrary, viewAddComic, viewChapters, viewAddChapter, viewEditChapter, viewSettings, viewAnalytics };
 })();
