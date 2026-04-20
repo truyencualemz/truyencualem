@@ -52,9 +52,12 @@ function buildNav() {
   const user = Auth.getUser();
   if (user) {
     nav.appendChild(Object.assign(UI.div('ns'), { textContent: 'Tài khoản' }));
-    const email = UI.div(); email.style.cssText='padding:8px 18px;font-size:10px;color:#555;word-break:break-all';
-    email.textContent = user.email || 'Đã đăng nhập';
+    const meta  = user.user_metadata || {};
+    const name  = meta.full_name || meta.name || user.email || '';
+    const email = UI.div(); email.style.cssText='padding:6px 18px 2px;font-size:10px;color:#555;word-break:break-all'; email.textContent=name||user.email;
     nav.appendChild(email);
+    const pf = UI.div('nv'); pf.innerHTML='<svg class="nic" viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm4 1.5a4 4 0 0 1 .5 1.9V12H3.5v-.6c0-.7.2-1.4.5-1.9A4.5 4.5 0 0 1 8 7.5a4.5 4.5 0 0 1 4 2z"/></svg>Tài khoản';
+    pf.addEventListener('click', () => Auth.showProfileModal()); nav.appendChild(pf);
     const so = UI.div('nv'); so.innerHTML='<svg class="nic" viewBox="0 0 16 16" fill="currentColor"><path d="M6 2H2v12h4v-1H3V3h3V2zm4.5 3.5l3 2.5-3 2.5V9H5V7h5.5V5.5z"/></svg>Đăng xuất';
     so.addEventListener('click', async () => { if (confirm('Đăng xuất?')) await Auth.signOut(); });
     nav.appendChild(so);

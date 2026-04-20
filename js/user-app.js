@@ -55,10 +55,27 @@ async function initUser() {
   const user = await Auth.init();
   if (!user) { hideLoading(); Auth.showAuthUI(); return; }
 
-  document.getElementById('user-email').textContent = user.email || '';
-  document.getElementById('signout-btn').addEventListener('click', async () => {
-    await Auth.signOut(); window.location.reload();
-  });
+  document.getElementById('user-email')?.remove();
+
+  // Update header with user info
+  const meta = user.user_metadata || {};
+  const displayName = meta.full_name || meta.name || user.email || '';
+  const avatarUrl   = meta.avatar_url || meta.picture || '';
+
+  const nameEl = document.getElementById('user-display-name');
+  if (nameEl) nameEl.textContent = displayName;
+
+  const avatarEl = document.getElementById('user-avatar');
+  if (avatarEl) {
+    if (avatarUrl) {
+      avatarEl.innerHTML = `<img src="${avatarUrl}" style="width:22px;height:22px;border-radius:50%;object-fit:cover">`;
+    } else {
+      avatarEl.textContent = (displayName).charAt(0).toUpperCase() || '?';
+    }
+  }
+
+  // Profile button
+  document.getElementById('profile-btn')?.addEventListener('click', () => Auth.showProfileModal());
 
   // Tab events
   document.querySelectorAll('.tab-btn').forEach(btn => {
