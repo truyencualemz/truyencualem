@@ -55,29 +55,27 @@ async function initUser() {
   const user = await Auth.init();
   if (!user) { hideLoading(); Auth.showAuthUI(); return; }
 
-  document.getElementById('user-email')?.remove();
-
-  // Update header with user info
-  const meta = user.user_metadata || {};
+  // Cập nhật header
+  const meta        = user.user_metadata || {};
   const displayName = meta.full_name || meta.name || user.email || '';
   const avatarUrl   = meta.avatar_url || meta.picture || '';
 
   const nameEl = document.getElementById('user-display-name');
   if (nameEl) nameEl.textContent = displayName;
-
   const avatarEl = document.getElementById('user-avatar');
   if (avatarEl) {
-    if (avatarUrl) {
-      avatarEl.innerHTML = `<img src="${avatarUrl}" style="width:22px;height:22px;border-radius:50%;object-fit:cover">`;
-    } else {
-      avatarEl.textContent = (displayName).charAt(0).toUpperCase() || '?';
-    }
+    if (avatarUrl) avatarEl.innerHTML = `<img src="${U.esc(avatarUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    else avatarEl.textContent = displayName.charAt(0).toUpperCase() || '?';
   }
 
-  // Profile button
-  document.getElementById('profile-btn')?.addEventListener('click', () => Auth.showProfileModal());
+  // Profile button → mở tab Tài khoản
+  document.getElementById('profile-btn')?.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-tab="account"]')?.classList.add('active');
+    activeTab = 'account'; renderTab('account');
+  });
 
-  // Tab events
+  // Tab click
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -87,8 +85,37 @@ async function initUser() {
     });
   });
 
-  // Load public comics
-  allComics = await UserDB.loadPublicComics();
+  // Load public comics — có thể lỗi nếu RLS chưa cấu hình
+  try {
+    allComics = await UserDB.loadPublicComics();
+  } catch(e) {
+    hideLoading();
+    const c = document.getElementById('content');
+    if (e.message === 'RLS_NOT_CONFIGURED') {
+      c.innerHTML = `<div style="padding:40px;max-width:500px;margin:0 auto">
+<div style="color:#e0a030;font-size:14px;font-weight:500;margin-bottom:12px">⚠ Chưa cấu hình quyền truy cập</div>
+<div style="font-size:12px;color:#888;line-height:1.9">
+  Cần chạy file <code style="background:#1a1a1e;padding:1px 6px;border-radius:3px;color:#9ae">data/supabase-user-schema.sql</code>
+  trong Supabase SQL Editor để cho phép user đọc truyện.<br><br>
+  <b style="color:#aaa">Cách thực hiện:</b><br>
+  1. Vào Supabase Dashboard → Database → SQL Editor<br>
+  2. Tạo New query<br>
+  3. Paste toàn bộ nội dung file <code style="background:#1a1a1e;padding:1px 6px;border-radius:3px;color:#9ae">supabase-user-schema.sql</code><br>
+  4. Nhấn Run<br>
+  5. Reload trang này
+</div></div>`;
+    } else {
+      c.innerHTML = `<div style="padding:40px;text-align:center;color:#e05555;font-size:13px">
+Lỗi tải truyện: ${U.esc(e.message)}<br>
+<button onclick="location.reload()" style="margin-top:14px;padding:8px 18px;background:#c8a96e;color:#18181c;border:none;border-radius:6px;cursor:pointer;font-size:12px">Thử lại</button></div>`;
+    }
+    // Vẫn render tab khác được (continue, bookmarks, account)
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      if (b.dataset.tab !== 'home') b.style.display = '';
+    });
+    return;
+  }
+
   hideLoading();
   renderTab('home');
 }
@@ -98,9 +125,10 @@ async function initUser() {
 ══════════════════════════════════════════════════════════ */
 async function renderTab(tab) {
   const c = document.getElementById('content'); c.innerHTML = '';
-  if (tab === 'home')      renderHome(c);
-  else if (tab === 'continue') await renderContinue(c);
+  if (tab === 'home')           renderHome(c);
+  else if (tab === 'continue')  await renderContinue(c);
   else if (tab === 'bookmarks') await renderBookmarks(c);
+  else if (tab === 'account')   renderAccount(c);
 }
 
 /* ── Home: browse library ── */
@@ -300,6 +328,102 @@ ${bk.note?`<div class="bk-note">${U.esc(bk.note)}</div>`:''}`;
     list.appendChild(card);
   });
   container.appendChild(list);
+}
+
+/* ── Account settings ── */
+function renderAccount(container) {
+  const user = Auth.getUser();
+  const meta = user?.user_metadata || {};
+  const email = user?.email || '';
+  const displayName = meta.full_name || meta.name || '';
+  const avatarUrl   = meta.avatar_url || meta.picture || '';
+  const provider    = user?.app_metadata?.provider || 'email';
+
+  const wrap = U.div(); wrap.style.maxWidth = '480px';
+
+  // Avatar + info card
+  const infoCard = U.div(); infoCard.style.cssText = 'background:#18181c;border:1px solid #2a2a30;border-radius:10px;padding:20px;margin-bottom:14px;display:flex;align-items:center;gap:16px';
+  const avi = U.div(); avi.style.cssText = 'width:56px;height:56px;border-radius:50%;background:#2a2a30;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden';
+  if (avatarUrl) {
+    avi.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover">`;
+  } else {
+    avi.textContent = (displayName || email).charAt(0).toUpperCase() || '?';
+  }
+  const infoRight = U.div(); infoRight.style.minWidth = '0';
+  infoRight.innerHTML = `<div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(displayName||'Chưa đặt tên')}</div>
+<div style="font-size:11px;color:#555;margin-top:3px">${U.esc(email)}</div>
+<div style="font-size:10px;color:#444;margin-top:3px">Đăng nhập qua: <b style="color:#666">${provider}</b></div>`;
+  infoCard.appendChild(avi); infoCard.appendChild(infoRight);
+  wrap.appendChild(infoCard);
+
+  // Message area
+  const msgEl = U.div(); msgEl.id='acc-msg'; msgEl.style.display='none'; msgEl.style.cssText='border-radius:6px;padding:9px 12px;font-size:12px;margin-bottom:12px';
+  const showMsg = (msg, ok=false) => { msgEl.textContent=msg; msgEl.style.display='block'; msgEl.style.background=ok?'#1a2e1a':'#2a1515'; msgEl.style.border=ok?'1px solid #2a3f2a':'1px solid #5a2020'; msgEl.style.color=ok?'#4caf50':'#e05555'; };
+  wrap.appendChild(msgEl);
+
+  // Edit profile card
+  const editCard = U.div(); editCard.style.cssText = 'background:#18181c;border:1px solid #2a2a30;border-radius:10px;padding:20px;margin-bottom:14px';
+  editCard.innerHTML = '<div style="font-size:12px;font-weight:500;margin-bottom:14px;color:#c8a96e">Thông tin cá nhân</div>';
+
+  const nameLbl = U.el('label'); nameLbl.style.cssText='font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px'; nameLbl.textContent='Tên hiển thị';
+  const nameInp = U.el('input','fi'); nameInp.value=displayName; nameInp.placeholder='Tên của bạn';
+  nameInp.addEventListener('focus',()=>nameInp.style.borderColor='#c8a96e');
+  nameInp.addEventListener('blur', ()=>nameInp.style.borderColor='#2a2a30');
+  editCard.appendChild(nameLbl); editCard.appendChild(nameInp);
+  editCard.style.paddingBottom='20px';
+
+  const saveInfoBtn = U.btn('btn-primary btn-sm','Lưu thông tin', async()=>{
+    saveInfoBtn.disabled=true; saveInfoBtn.textContent='Đang lưu...';
+    try {
+      await Auth.updateProfile({ displayName: nameInp.value.trim() });
+      // Update header
+      const nm=nameInp.value.trim();
+      const nameEl=document.getElementById('user-display-name'); if(nameEl)nameEl.textContent=nm;
+      const avEl=document.getElementById('user-avatar'); if(avEl&&!avatarUrl)avEl.textContent=nm.charAt(0).toUpperCase()||'?';
+      showMsg('✓ Đã lưu thông tin', true);
+    } catch(e){ showMsg(e.message); }
+    saveInfoBtn.disabled=false; saveInfoBtn.textContent='Lưu thông tin';
+  });
+  saveInfoBtn.style.marginTop='12px';
+  editCard.appendChild(saveInfoBtn);
+  wrap.appendChild(editCard);
+
+  // Change password (email provider only)
+  if (provider === 'email') {
+    const passCard = U.div(); passCard.style.cssText='background:#18181c;border:1px solid #2a2a30;border-radius:10px;padding:20px;margin-bottom:14px';
+    passCard.innerHTML='<div style="font-size:12px;font-weight:500;margin-bottom:14px;color:#c8a96e">Đổi mật khẩu</div>';
+    const fields = [['pass-new','Mật khẩu mới','Ít nhất 6 ký tự','password'],['pass-cfm','Xác nhận mật khẩu mới','Nhập lại mật khẩu mới','password']];
+    const inputs = {};
+    fields.forEach(([id,lbl,ph,type])=>{
+      const l=U.el('label'); l.style.cssText='font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px;margin-top:10px'; l.textContent=lbl;
+      const inp=U.el('input','fi'); inp.id=id; inp.type=type; inp.placeholder=ph;
+      inp.addEventListener('focus',()=>inp.style.borderColor='#c8a96e');
+      inp.addEventListener('blur', ()=>inp.style.borderColor='#2a2a30');
+      inputs[id]=inp; passCard.appendChild(l); passCard.appendChild(inp);
+    });
+    const changePassBtn=U.btn('btn-primary btn-sm','Đổi mật khẩu',async()=>{
+      const p1=inputs['pass-new'].value, p2=inputs['pass-cfm'].value;
+      if(p1.length<6){showMsg('Mật khẩu ít nhất 6 ký tự');return;}
+      if(p1!==p2){showMsg('Mật khẩu xác nhận không khớp');return;}
+      changePassBtn.disabled=true; changePassBtn.textContent='Đang lưu...';
+      try{ await Auth.updatePassword(p1); showMsg('✓ Đã đổi mật khẩu thành công',true); inputs['pass-new'].value=''; inputs['pass-cfm'].value=''; }
+      catch(e){ showMsg(e.message); }
+      changePassBtn.disabled=false; changePassBtn.textContent='Đổi mật khẩu';
+    });
+    changePassBtn.style.marginTop='12px';
+    passCard.appendChild(changePassBtn);
+    wrap.appendChild(passCard);
+  }
+
+  // Danger zone
+  const dangerCard = U.div(); dangerCard.style.cssText='background:#18181c;border:1px solid #3a2020;border-radius:10px;padding:20px';
+  dangerCard.innerHTML='<div style="font-size:12px;font-weight:500;margin-bottom:12px;color:#e05555">Đăng xuất</div>';
+  const soBtn=U.btn('btn-danger btn-sm','Đăng xuất khỏi tài khoản',async()=>{
+    if(confirm('Đăng xuất?')) await Auth.signOut();
+  });
+  dangerCard.appendChild(soBtn);
+  wrap.appendChild(dangerCard);
+  container.appendChild(wrap);
 }
 
 /* ══════════════════════════════════════════════════════════

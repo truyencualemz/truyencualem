@@ -97,21 +97,37 @@ window.UserDB = (() => {
      Load tất cả comics published (của mọi admin).
   ════════════════════════════════════════════════════════ */
   async function loadPublicComics() {
-    const { data: comics } = await sb()
+    const { data: comics, error: comicsErr } = await sb()
       .from('comics')
       .select('*')
       .eq('status', 'published')
       .order('title_vi');
-    if (!comics?.length) return [];
 
-    const ids = comics.map(c => c.id);
-    const { data: chapters } = await sb()
+    if (comicsErr) {
+      // Supabase trả các mã lỗi RLS: 42501, PGRST301, hoặc message chứa 'policy'
+      const msg = comicsErr.message || '';
+      const code = comicsErr.code || '';
+      if (code === '42501' || code === 'PGRST301' || msg.includes('policy') || msg.includes('permission')) {
+        throw new Error('RLS_NOT_CONFIGURED');
+      }
+      throw new Error(msg || 'Lỗi kết nối Supabase');
+    }
+
+    // Không lỗi nhưng trả về null hoặc rỗng → RLS deny im lặng (Supabase trả [] thay vì lỗi)
+    // Thử phân biệt bằng cách check xem có data thực sự không
+    const list = comics || [];
+    if (!list.length) return [];
+
+    const ids = list.map(c => c.id);
+    const { data: chapters, error: chapErr } = await sb()
       .from('chapters')
       .select('id,comic_id,num,title,type,languages')
       .in('comic_id', ids)
       .order('num');
 
-    return comics.map(c => ({
+    if (chapErr) console.warn('[UserDB] chapters load error:', chapErr.message);
+
+    return list.map(c => ({
       id: c.id, titleVI: c.title_vi, titleEN: c.title_en,
       cover: c.cover, genre: c.genre, status: c.status,
       chapters: (chapters || [])
