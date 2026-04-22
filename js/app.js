@@ -135,31 +135,11 @@ async function init() {
     return;
   }
 
-  // 4. Kiểm tra quyền admin — chặn user thường
-  let isAdmin = false;
-  try {
-    isAdmin = await Auth.checkIsAdmin();
-  } catch(e) {
-    // profiles table chưa tồn tại (schema chưa chạy) → cho qua, hiện warning
-    console.warn('Admin check failed:', e.message);
-    isAdmin = true; // fallback: không chặn nếu profiles chưa có
-  }
-
-  if (!isAdmin) {
-    UI.hideLoading();
-    showAccessDenied(user.email);
-    return;
-  }
-
-  // 5. Load dữ liệu
-  try {
-    await DB.loadMeta();
-  } catch(e) {
-    console.error('loadMeta failed:', e);
-  }
-
+  // Admin check + data load đã được xử lý trong Auth.onSignedIn()
+  // (chạy qua onAuthStateChange sau khi JWT sẵn sàng)
+  // Không check ở đây tránh race condition khi reload trang.
+  // onAuthStateChange sẽ tự fire SIGNED_IN và gọi onSignedIn().
   UI.hideLoading();
-  UI.renderAll();
 }
 
 /* Màn hình từ chối truy cập cho user thường */

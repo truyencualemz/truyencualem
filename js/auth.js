@@ -19,15 +19,16 @@ window.Auth = (() => {
 
   /* ── Khởi tạo ── */
   async function init() {
-    // Xử lý callback sau khi Google OAuth redirect về
     const { data: { session } } = await window._sb.auth.getSession();
     _user = session?.user || null;
 
-    window._sb.auth.onAuthStateChange((event, session) => {
+    window._sb.auth.onAuthStateChange(async (event, session) => {
       _user = session?.user || null;
-      if (event === 'SIGNED_IN')            onSignedIn();
-      if (event === 'SIGNED_OUT')           onSignedOut();
-      if (event === 'PASSWORD_RECOVERY')    showResetPasswordUI();
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (_user) await onSignedIn();
+      }
+      if (event === 'SIGNED_OUT')        onSignedOut();
+      if (event === 'PASSWORD_RECOVERY') showResetPasswordUI();
     });
 
     return _user;
@@ -35,10 +36,27 @@ window.Auth = (() => {
 
   async function onSignedIn() {
     document.getElementById('auth-overlay')?.remove();
-    // Nếu đang ở trang user thì gọi initUser, không gọi UI.renderAll
-    if (typeof initUser === 'function' && window.location.pathname.includes('user')) {
-      // user-app.js tự xử lý
-    } else if (window.UI) {
+
+    const isUserPage = typeof initUser === 'function'
+      && window.location.pathname.includes('user');
+
+    if (isUserPage) {
+      // user-app.js tự xử lý toàn bộ
+      return;
+    }
+
+    // Trang admin: kiểm tra quyền TRONG callback — lúc này JWT đã sẵn sàng
+    if (window.UI) {
+      try {
+        const isAdmin = await checkIsAdmin();
+        if (!isAdmin) {
+          if (window.showAccessDenied) showAccessDenied(_user?.email || '');
+          return;
+        }
+      } catch(e) {
+        // profiles chưa tồn tại → cho qua (schema chưa chạy)
+        console.warn('Admin check skipped:', e.message);
+      }
       UI.showLoading('Đang tải dữ liệu...');
       await DB.loadMeta();
       UI.hideLoading();

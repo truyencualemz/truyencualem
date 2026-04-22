@@ -162,23 +162,70 @@ window.Admin = (() => {
       const chapCount = m.chapters?.length || 0;
       const textChaps = m.chapters?.filter(c=>c.type==='text').length || 0;
       const genreLabel = GENRES.find(g=>g[0]===m.genre)?.[1] || m.genre || '';
-      // Highlight search term in title
+      const isDraft = m.status === 'draft';
       const titleVI = LibState.q
         ? U().esc(m.titleVI).replace(new RegExp(`(${U().esc(LibState.q)})`, 'gi'), '<mark style="background:#c8a96e33;color:#c8a96e;border-radius:2px">$1</mark>')
         : U().esc(m.titleVI);
-      card.innerHTML = `<div class="ct">${m.cover
+
+      // Thumbnail
+      const thumb = U().div('ct');
+      if (isDraft) thumb.style.opacity = '0.5';
+      thumb.innerHTML = m.cover
         ? `<img src="${m.cover}" alt="" loading="lazy">`
-        : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`
-      }</div>
-<div class="ci">
-  <div class="cvi">${titleVI}</div>
-  <div class="cen">${U().esc(m.titleEN)||'—'}</div>
-  <div class="cm">
-    <span class="badge ${m.status==='published'?'bok':'bdr'}">${m.status==='published'?'Công khai':'Nháp'}</span>
-    ${genreLabel ? `<span class="badge" style="background:#1e1e24;color:#777;border:1px solid #2a2a30">${genreLabel}</span>` : ''}
-    <span>${chapCount} ch${textChaps>0?` · ${textChaps} chữ`:''}</span>
-  </div>
+        : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
+
+      // Info
+      const info = U().div('ci');
+      info.innerHTML = `<div class="cvi">${titleVI}</div>
+<div class="cen">${U().esc(m.titleEN)||'—'}</div>
+<div class="cm">
+  <span class="badge ${isDraft?'bdr':'bok'}">${isDraft?'Nháp':'Công khai'}</span>
+  ${genreLabel?`<span class="badge" style="background:#1e1e24;color:#777;border:1px solid #2a2a30">${genreLabel}</span>`:''}
+  <span>${chapCount} ch${textChaps>0?` · ${textChaps} chữ`:''}</span>
 </div>`;
+
+      // Action bar (hiện khi hover)
+      const acts = U().div(); acts.style.cssText = 'display:flex;gap:4px;padding:6px 8px;background:#111;border-top:1px solid #2a2a30;flex-shrink:0';
+
+      // Nút ẩn/hiện
+      const toggleBtn = U().el('button'); toggleBtn.style.cssText = 'flex:1;padding:4px 0;font-size:10px;border-radius:4px;border:1px solid #2a2a30;cursor:pointer;font-family:monospace;background:transparent;transition:all .12s;color:#888';
+      toggleBtn.textContent = isDraft ? '👁 Công khai' : '🙈 Ẩn';
+      toggleBtn.addEventListener('click', async e => {
+        e.stopPropagation();
+        toggleBtn.disabled = true;
+        try {
+          const newStatus = isDraft ? 'published' : 'draft';
+          await DB.toggleComicStatus(m.id, newStatus);
+          // Rebuild grid
+          const gw = document.getElementById('lib-grid');
+          if (gw) { const ng = U().div(); ng.id='lib-grid'; buildGrid(ng); gw.replaceWith(ng); }
+        } catch(err) { alert('Lỗi: ' + err.message); toggleBtn.disabled = false; }
+      });
+
+      // Nút xóa
+      const delBtn = U().el('button'); delBtn.style.cssText = 'padding:4px 8px;font-size:10px;border-radius:4px;border:1px solid #3a2020;cursor:pointer;font-family:monospace;background:transparent;color:#e05555;transition:all .12s';
+      delBtn.textContent = '🗑';
+      delBtn.title = 'Xóa truyện';
+      delBtn.addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!confirm(`Xóa truyện "${m.titleVI}"?\n\nSẽ xóa tất cả chương, lịch sử đọc và bookmark của truyện này. Không thể hoàn tác.`)) return;
+        delBtn.disabled = true; delBtn.textContent = '...';
+        try {
+          // Xóa text chapters trước
+          for (const ch of (m.chapters||[]).filter(c=>c.type==='text')) {
+            await DB.deleteTextChap(ch.id);
+          }
+          await DB.deleteComic(m.id);
+          // Nếu đang xem chapters của truyện này → về library
+          if (App.selComicId === m.id) App.selComicId = App.comics[0]?.id || null;
+          UI.renderContent(); UI.renderNav();
+        } catch(err) { alert('Lỗi xóa: ' + err.message); delBtn.disabled = false; delBtn.textContent = '🗑'; }
+      });
+
+      acts.appendChild(toggleBtn); acts.appendChild(delBtn);
+
+      card.style.cssText += ';display:flex;flex-direction:column;cursor:pointer';
+      card.appendChild(thumb); card.appendChild(info); card.appendChild(acts);
       card.addEventListener('click', () => go('chapters', { selComicId: m.id }));
       grid.appendChild(card);
     });

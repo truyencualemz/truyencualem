@@ -20,6 +20,7 @@ window.DB = (() => {
     const uid = Auth.getUserId();
     if (!uid) { App.comics = []; return; }
 
+    // Load tất cả truyện của chính mình (kể cả draft)
     const comics = await must(
       sb().from('comics').select('*').eq('user_id', uid).order('sort_order')
     );
@@ -34,6 +35,7 @@ window.DB = (() => {
       descVI:  c.desc_vi,    descEN:  c.desc_en,
       genre:   c.genre,      status:  c.status,
       cover:   c.cover,      _order:  c.sort_order ?? i,
+      isOwner: true,
       chapters: chapters
         .filter(ch => ch.comic_id === c.id)
         .map(ch => ({
@@ -41,6 +43,22 @@ window.DB = (() => {
           type: ch.type, languages: ch.languages || [], pages: ch.pages || [],
         })),
     }));
+  }
+
+  /* Ẩn / hiện truyện (đổi status published ↔ draft) */
+  async function toggleComicStatus(comicId, newStatus) {
+    const uid = Auth.getUserId(); if (!uid) return;
+    await must(sb().from('comics').update({ status: newStatus }).eq('id', comicId).eq('user_id', uid));
+    const comic = App.comics.find(c => c.id === comicId);
+    if (comic) comic.status = newStatus;
+  }
+
+  /* Xóa truyện hoàn toàn */
+  async function deleteComic(comicId) {
+    const uid = Auth.getUserId(); if (!uid) return;
+    // cascade: chapters + text_chaps + reading_history + bookmarks
+    await must(sb().from('comics').delete().eq('id', comicId).eq('user_id', uid));
+    App.comics = App.comics.filter(c => c.id !== comicId);
   }
 
   async function saveMeta() {
@@ -169,5 +187,6 @@ window.DB = (() => {
     getBlobURL, revokeChap,
     saveTextChap, getTextChap, deleteTextChap,
     clearAll, getUsage, exportAll, importAll,
+    toggleComicStatus, deleteComic,
   };
 })();
