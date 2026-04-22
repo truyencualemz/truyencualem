@@ -620,5 +620,174 @@ window.Admin = (() => {
     container.appendChild(w);
   }
 
-  return { viewLibrary, viewAddComic, viewChapters, viewAddChapter, viewEditChapter, viewSettings, viewAnalytics };
+  /* ════ USERS ═══════════════════════════════════════════ */
+  async function viewUsers(container) {
+    const w = U().div(); w.style.maxWidth = '760px';
+    w.innerHTML = '<div style="font-family:monospace;font-size:15px;margin-bottom:16px">👥 Quản lý tài khoản</div>';
+
+    UI.showLoading('Đang tải danh sách user...');
+    let profiles = [], historyData = [];
+    try {
+      const { data: p } = await window._sb
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      profiles = p || [];
+
+      const { data: h } = await window._sb
+        .from('reading_history')
+        .select('user_id, updated_at, comic_id');
+      historyData = h || [];
+    } catch(e) {
+      UI.hideLoading();
+      w.innerHTML += `<div style="color:#e05555;font-size:12px;padding:16px 0">
+        Lỗi: ${e.message}<br>
+        <span style="color:#555;font-size:11px">Cần chạy supabase-schema.sql để tạo bảng profiles.</span>
+      </div>`;
+      container.appendChild(w); return;
+    }
+    UI.hideLoading();
+
+    // Summary bar
+    const admins = profiles.filter(p => p.role === 'admin').length;
+    const users  = profiles.filter(p => p.role === 'user').length;
+    const blocked = profiles.filter(p => p.is_blocked).length;
+    const sb = U().div('stats'); sb.style.marginBottom = '16px';
+    [[profiles.length,'Tổng'],[admins,'Admin'],[users,'User'],[blocked,'Bị khóa']].forEach(([v,l])=>{
+      sb.innerHTML += `<div class="sc"><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
+    });
+    w.appendChild(sb);
+
+    // Add user manually
+    const addCard = U().div('sc'); addCard.style.marginBottom = '16px';
+    addCard.innerHTML = '<div class="sl" style="margin-bottom:8px">➕ Thêm tài khoản</div>';
+    const addRow = U().div(); addRow.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap';
+    const emailInp = U().el('input','fi'); emailInp.placeholder='Email'; emailInp.type='email'; emailInp.style.flex='1';
+    const passInp  = U().el('input','fi'); passInp.placeholder='Mật khẩu (≥6 ký tự)'; passInp.type='password'; passInp.style.flex='1';
+    const roleSelA = U().el('select','fi'); roleSelA.style.cssText='width:auto;font-size:12px;padding:7px 10px';
+    [['user','User'],['admin','Admin']].forEach(([v,l])=>{ const o=U().el('option');o.value=v;o.textContent=l;roleSelA.appendChild(o); });
+    const addMsg = U().div(); addMsg.style.cssText='font-size:11px;margin-top:6px;display:none';
+    const addBtn = U().mkBtn('btn-primary btn-xs','+ Tạo', async()=>{
+      const email=emailInp.value.trim(), pass=passInp.value, role=roleSelA.value;
+      if(!email||!pass){addMsg.style.display='block';addMsg.style.color='#e05555';addMsg.textContent='Nhập email và mật khẩu';return;}
+      if(pass.length<6){addMsg.style.display='block';addMsg.style.color='#e05555';addMsg.textContent='Mật khẩu ít nhất 6 ký tự';return;}
+      addBtn.disabled=true; addBtn.textContent='Đang tạo...';
+      // Dùng admin API qua Supabase — chỉ được với service_role key
+      // Với anon key: dùng signUp (user tự đăng ký), sau đó update role
+      const { data, error } = await window._sb.auth.signUp({ email, password: pass });
+      if(error){ addMsg.style.display='block';addMsg.style.color='#e05555';addMsg.textContent=error.message; addBtn.disabled=false;addBtn.textContent='+ Tạo';return; }
+      if(data?.user && role==='admin'){
+        await window._sb.from('profiles').upsert({id:data.user.id,email,role:'admin'},{onConflict:'id'});
+      }
+      addMsg.style.display='block';addMsg.style.color='#4caf50';addMsg.textContent=`✓ Đã tạo tài khoản ${email}`;
+      emailInp.value=''; passInp.value='';
+      addBtn.disabled=false;addBtn.textContent='+ Tạo';
+      setTimeout(()=>{ Admin.viewUsers(container); container.innerHTML=''; Admin.viewUsers(container); },1000);
+    });
+    [emailInp,passInp,roleSelA,addBtn].forEach(e=>addRow.appendChild(e));
+    addCard.appendChild(addRow); addCard.appendChild(addMsg); w.appendChild(addCard);
+
+    // User table
+    const tableWrap = U().div(); tableWrap.style.cssText='background:#18181c;border:1px solid #2a2a30;border-radius:8px;overflow:hidden';
+    const tbl = U().el('table'); tbl.style.cssText='width:100%;border-collapse:collapse';
+    tbl.innerHTML=`<thead><tr style="background:#111;border-bottom:1px solid #2a2a30">
+<th style="padding:10px 14px;font-size:10px;font-weight:500;color:#666;text-align:left;letter-spacing:.5px;text-transform:uppercase">Tài khoản</th>
+<th style="padding:10px 14px;font-size:10px;font-weight:500;color:#666;text-align:left;letter-spacing:.5px;text-transform:uppercase">Role</th>
+<th style="padding:10px 14px;font-size:10px;font-weight:500;color:#666;text-align:left;letter-spacing:.5px;text-transform:uppercase">Hoạt động</th>
+<th style="padding:10px 14px;font-size:10px;font-weight:500;color:#666;text-align:center;letter-spacing:.5px;text-transform:uppercase">Thao tác</th>
+</tr></thead>`;
+    const tbody = U().el('tbody');
+
+    profiles.forEach(p => {
+      const reads  = historyData.filter(h=>h.user_id===p.id).length;
+      const lastH  = historyData.filter(h=>h.user_id===p.id).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at))[0];
+      const lastAct= lastH ? fmtRelTime(lastH.updated_at) : (p.last_seen ? fmtRelTime(p.last_seen) : 'Chưa có');
+      const isMe   = p.id === Auth.getUserId();
+
+      const tr = U().el('tr'); tr.style.cssText='border-bottom:1px solid #1e1e24;transition:background .1s';
+      tr.addEventListener('mouseenter',()=>tr.style.background='#1f1f24');
+      tr.addEventListener('mouseleave',()=>tr.style.background='');
+
+      // Avatar + email
+      const av = p.avatar_url
+        ? `<img src="${U().esc(p.avatar_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px">`
+        : `<span style="display:inline-flex;width:28px;height:28px;border-radius:50%;background:#2a2a30;align-items:center;justify-content:center;font-size:11px;margin-right:8px;vertical-align:middle">${(p.display_name||p.email||'?').charAt(0).toUpperCase()}</span>`;
+      const namePart = p.display_name ? `<div style="font-size:12px;font-weight:500">${U().esc(p.display_name)}</div><div style="font-size:10px;color:#555">${U().esc(p.email)}</div>` : `<div style="font-size:12px">${U().esc(p.email)}</div>`;
+      const blockedBadge = p.is_blocked ? `<span style="font-size:9px;background:#3a1515;color:#e05555;border:1px solid #5a2020;padding:1px 5px;border-radius:3px;margin-left:4px">Bị khóa</span>` : '';
+      const meBadge = isMe ? `<span style="font-size:9px;background:#1a2a1a;color:#4caf50;border:1px solid #2a4a2a;padding:1px 5px;border-radius:3px;margin-left:4px">Bạn</span>` : '';
+
+      const td1 = U().el('td'); td1.style.cssText='padding:10px 14px';
+      td1.innerHTML=`<div style="display:flex;align-items:center">${av}<div>${namePart}${blockedBadge}${meBadge}</div></div>`;
+
+      // Role selector
+      const td2 = U().el('td'); td2.style.padding='10px 14px';
+      const roleSel = U().el('select'); roleSel.style.cssText='background:#111;border:1px solid #2a2a30;border-radius:4px;padding:4px 7px;color:#e8e6e0;font-size:11px;cursor:pointer;font-family:inherit';
+      [['user','User'],['admin','Admin']].forEach(([v,l])=>{
+        const o=U().el('option');o.value=v;o.textContent=l;if(v===p.role)o.selected=true;roleSel.appendChild(o);
+      });
+      if(isMe) roleSel.disabled=true; // không tự đổi role của mình
+      roleSel.addEventListener('change', async()=>{
+        await window._sb.from('profiles').update({role:roleSel.value}).eq('id',p.id);
+      });
+      td2.appendChild(roleSel);
+
+      // Activity
+      const td3 = U().el('td'); td3.style.padding='10px 14px';
+      td3.innerHTML=`<div style="font-size:11px;color:#c8a96e">${reads} lượt đọc</div><div style="font-size:10px;color:#555;margin-top:2px">Cuối: ${lastAct}</div>`;
+
+      // Actions
+      const td4 = U().el('td'); td4.style.cssText='padding:10px 14px;text-align:center';
+      const acts = U().div(); acts.style.cssText='display:flex;gap:5px;justify-content:center';
+
+      const blockBtn = U().mkBtn(p.is_blocked?'btn-ghost btn-xs':'btn-ghost btn-xs',
+        p.is_blocked?'🔓 Mở khóa':'🔒 Khóa',
+        async()=>{
+          if(isMe){alert('Không thể tự khóa chính mình');return;}
+          await window._sb.from('profiles').update({is_blocked:!p.is_blocked}).eq('id',p.id);
+          await viewUsers(container); container.innerHTML=''; await viewUsers(container);
+        });
+      if(p.is_blocked) blockBtn.style.cssText='color:#4caf50;border-color:#2a4a2a';
+
+      const delBtn = U().mkBtn('btn-danger btn-xs','🗑 Xóa', async()=>{
+        if(isMe){alert('Không thể xóa tài khoản của chính mình');return;}
+        if(!confirm(`Xóa tài khoản ${p.email}?\nHành động này không thể hoàn tác.`))return;
+        // Xóa profile (cascade xóa history + bookmarks)
+        await window._sb.from('profiles').delete().eq('id',p.id);
+        await viewUsers(container); container.innerHTML=''; await viewUsers(container);
+      });
+
+      [blockBtn, delBtn].forEach(b=>acts.appendChild(b));
+      td4.appendChild(acts);
+
+      [td1,td2,td3,td4].forEach(td=>tr.appendChild(td));
+      tbody.appendChild(tr);
+    });
+
+    if(!profiles.length){
+      const tr=U().el('tr'); const td=U().el('td'); td.colSpan=4; td.style.cssText='padding:32px;text-align:center;color:#555;font-size:12px';
+      td.textContent='Chưa có user nào. Khi user đăng ký, họ sẽ xuất hiện ở đây.';
+      tr.appendChild(td); tbody.appendChild(tr);
+    }
+
+    tbl.appendChild(tbody); tableWrap.appendChild(tbl); w.appendChild(tableWrap);
+
+    // Note về quyền xóa
+    const note = U().div(); note.style.cssText='font-size:10px;color:#444;margin-top:10px;line-height:1.7';
+    note.innerHTML='<b style="color:#555">Lưu ý:</b> Xóa tài khoản sẽ xóa lịch sử đọc và bookmark của user đó. Tài khoản Google OAuth chỉ xóa được profile, không xóa được khỏi Supabase Auth (cần dùng Dashboard).';
+    w.appendChild(note);
+    container.appendChild(w);
+  }
+
+  function fmtRelTime(iso) {
+    if (!iso) return '—';
+    const d=new Date(iso), now=new Date();
+    const diff=Math.floor((now-d)/60000);
+    if(diff<2)   return 'Vừa xong';
+    if(diff<60)  return diff+'p trước';
+    if(diff<1440) return Math.floor(diff/60)+'g trước';
+    if(diff<43200) return Math.floor(diff/1440)+'ngày trước';
+    return d.toLocaleDateString('vi-VN');
+  }
+
+  return { viewLibrary, viewAddComic, viewChapters, viewAddChapter, viewEditChapter, viewSettings, viewAnalytics, viewUsers };
 })();

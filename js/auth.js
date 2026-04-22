@@ -89,7 +89,28 @@ window.Auth = (() => {
     await window._sb.auth.signOut();
   }
 
-  /* ── Quên mật khẩu ── */
+  /* ── Kiểm tra quyền admin ── */
+  async function checkIsAdmin() {
+    const uid = getUserId(); if (!uid) return false;
+    const { data, error } = await window._sb
+      .from('profiles')
+      .select('role, is_blocked')
+      .eq('id', uid)
+      .single();
+    if (error || !data) return false;
+    return data.role === 'admin' && !data.is_blocked;
+  }
+
+  /* ── Lấy profile của user hiện tại ── */
+  async function getProfile() {
+    const uid = getUserId(); if (!uid) return null;
+    const { data } = await window._sb
+      .from('profiles')
+      .select('*')
+      .eq('id', uid)
+      .single();
+    return data || null;
+  }
   async function sendPasswordReset(email) {
     const { error } = await window._sb.auth.resetPasswordForEmail(email, {
       redirectTo: currentPageURL(),
@@ -480,5 +501,6 @@ ${provider === 'email' ? `
     init, getUser, getUserId, signOut,
     showAuthUI, showProfileModal,
     sendPasswordReset, updatePassword, updateProfile,
+    checkIsAdmin, getProfile,
   };
 })();
