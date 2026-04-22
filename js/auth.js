@@ -126,16 +126,27 @@ window.Auth = (() => {
   }
 
   /* ── Kiểm tra quyền admin ── */
-  async function checkIsAdmin() {
-    const uid = getUserId(); if (!uid) return false;
-    const { data, error } = await window._sb
-      .from('profiles')
-      .select('role, is_blocked')
-      .eq('id', uid)
-      .single();
-    if (error || !data) return false;
-    return data.role === 'admin' && !data.is_blocked;
-  }
+  async function checkAdminAccess() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { allowed: false, role: null };
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('role, is_blocked, display_name, email, avatar_url')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !profile) return { allowed: false, role: null };
+  if (profile.is_blocked) return { allowed: false, role: null, blocked: true };
+
+  // Chỉ admin và publisher mới được vào trang admin
+  const allowed = ['admin', 'publisher'].includes(profile.role);
+  return {
+    allowed,
+    role: profile.role,
+    profile: { ...profile, id: user.id }
+  };
+}
 
   /* ── Lấy profile của user hiện tại ── */
   async function getProfile() {
@@ -541,3 +552,5 @@ ${provider === 'email' ? `
     checkIsAdmin, getProfile,
   };
 })();
+
+Auth.checkAdminAccess = checkAdminAccess;
