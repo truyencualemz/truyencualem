@@ -23,11 +23,6 @@ window.Admin = (() => {
 
   function filterComics() {
     let list = App.comics.slice();
-    // Publisher chỉ thấy truyện của mình
-    if (window.CURRENT_ROLE === 'publisher') {
-      const myId = window.CURRENT_PROFILE?.id;
-      list = list.filter(m => m.created_by === myId);
-    }
     // Tìm kiếm
     const q = LibState.q.toLowerCase().trim();
     if (q) list = list.filter(m =>
@@ -54,13 +49,10 @@ window.Admin = (() => {
 
     // Stats bar
     const sg = U().div('stats');
-    const myComics = window.CURRENT_ROLE === 'publisher'
-      ? App.comics.filter(m => m.created_by === window.CURRENT_PROFILE?.id)
-      : App.comics;
-    [[myComics.length,'Tổng truyện'],
-     [myComics.reduce((a,x)=>a+(x.chapters?.length||0),0),'Tổng chương'],
-     [myComics.filter(x=>x.status==='published').length,'Công khai'],
-     [new Set(myComics.flatMap(x=>x.chapters?.flatMap(c=>c.languages||[])||[])).size || 2,'Ngôn ngữ'],
+    [[App.comics.length,'Tổng truyện'],
+     [App.comics.reduce((a,x)=>a+(x.chapters?.length||0),0),'Tổng chương'],
+     [App.comics.filter(x=>x.status==='published').length,'Công khai'],
+     [new Set(App.comics.flatMap(x=>x.chapters?.flatMap(c=>c.languages||[])||[])).size || 2,'Ngôn ngữ'],
     ].forEach(([v,l]) => {
       sg.innerHTML += `<div class="sc"><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
     });
@@ -195,6 +187,15 @@ window.Admin = (() => {
       // Action bar (hiện khi hover)
       const acts = U().div(); acts.style.cssText = 'display:flex;gap:4px;padding:6px 8px;background:#111;border-top:1px solid #2a2a30;flex-shrink:0';
 
+      // Nút sửa
+      const editBtn = U().el('button'); editBtn.style.cssText = 'flex:1;padding:4px 0;font-size:10px;border-radius:4px;border:1px solid #2a2a30;cursor:pointer;font-family:monospace;background:transparent;color:#888;transition:all .12s';
+      editBtn.textContent = '✏ Sửa';
+      editBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        App.coverData = m.cover || null;
+        go('edit-comic', { selComicId: m.id });
+      });
+
       // Nút ẩn/hiện
       const toggleBtn = U().el('button'); toggleBtn.style.cssText = 'flex:1;padding:4px 0;font-size:10px;border-radius:4px;border:1px solid #2a2a30;cursor:pointer;font-family:monospace;background:transparent;transition:all .12s;color:#888';
       toggleBtn.textContent = isDraft ? '👁 Công khai' : '🙈 Ẩn';
@@ -230,7 +231,7 @@ window.Admin = (() => {
         } catch(err) { alert('Lỗi xóa: ' + err.message); delBtn.disabled = false; delBtn.textContent = '🗑'; }
       });
 
-      acts.appendChild(toggleBtn); acts.appendChild(delBtn);
+      acts.appendChild(editBtn); acts.appendChild(toggleBtn); acts.appendChild(delBtn);
 
       card.style.cssText += ';display:flex;flex-direction:column;cursor:pointer';
       card.appendChild(thumb); card.appendChild(info); card.appendChild(acts);
@@ -313,9 +314,107 @@ window.Admin = (() => {
     App.comics.push({ id: 'c' + Date.now(), titleVI: vi, titleEN: (document.getElementById('fen')?.value || '').trim(),
       descVI: document.getElementById('fdvi')?.value || '', descEN: document.getElementById('fden')?.value || '',
       genre: document.getElementById('fgenre')?.value || 'action', status: document.getElementById('fstatus')?.value || 'published',
-      cover: App.coverData || null, chapters: [],
-      created_by: window.CURRENT_PROFILE?.id || null });
+      cover: App.coverData || null, chapters: [] });
     await DB.saveMeta(); UI.hideLoading(); App.coverData = null; App.errors = {}; go('library');
+  }
+
+  /* ════ EDIT COMIC ══════════════════════════════════════ */
+  function viewEditComic() {
+    const comic = App.getComic();
+    if (!comic) { go('library'); return U().div(); }
+
+    const w = U().div(); w.style.maxWidth = '820px';
+    if (Object.keys(App.errors).length) {
+      const eb = U().div('ebanner'); eb.textContent = '⚠ ' + Object.values(App.errors).join(' · '); w.appendChild(eb);
+    }
+
+    const card = U().div('fc');
+    card.innerHTML = `<div class="fct">✏ Sửa thông tin truyện — <span style="color:#c8a96e;font-family:monospace">${U().esc(comic.titleVI)}</span></div>`;
+
+    // Cover row
+    const cr = U().div(); cr.style.cssText = 'display:flex;gap:14px;align-items:flex-start;margin-bottom:14px';
+    const pv = U().div(); pv.style.flexShrink = '0';
+    const hasCover = App.coverData || comic.cover;
+    pv.innerHTML = `<div id="cprev" style="width:80px;height:120px;background:#111;border-radius:7px;border:1px dashed #2a2a30;display:flex;align-items:center;justify-content:center;font-size:24px;color:#333;${hasCover?'display:none':''}">📖</div>
+<img id="cimg" style="${hasCover?'':'display:none;'}width:80px;height:120px;object-fit:cover;border-radius:7px;border:1px solid #2a2a30" src="${U().esc(App.coverData||comic.cover||'')}" alt="">`;
+    const rs = U().div(); rs.style.flex = '1';
+    const uz = U().div('uz');
+    uz.innerHTML = `<input type="file" id="cf" accept="image/*"><div class="uzi">🖼️</div><div class="uzt">Click để đổi ảnh bìa</div><div class="uzh">JPG PNG WebP</div>`;
+    uz.querySelector('input').addEventListener('change', e => {
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader(); r.onload = ev => { App.coverData = ev.target.result; showCover(App.coverData); }; r.readAsDataURL(f);
+    });
+    const ui = U().el('input', 'fi'); ui.style.cssText = 'margin-top:7px;font-size:11px;padding:6px 9px'; ui.placeholder = 'Hoặc URL ảnh bìa'; ui.value = comic.cover || '';
+    ui.addEventListener('input', () => { if (ui.value.trim()) { App.coverData = ui.value.trim(); showCover(App.coverData); } });
+    rs.appendChild(uz); rs.appendChild(ui); cr.appendChild(pv); cr.appendChild(rs); card.appendChild(cr);
+
+    // Title row
+    const r1 = U().div('fr');
+    [{ id: 'fvi', lbl: '🇻🇳 Tên truyện (VI) *', val: comic.titleVI, ek: 'titleVI' },
+     { id: 'fen', lbl: '🇬🇧 Title (EN)',         val: comic.titleEN || '' }].forEach(f => {
+      const fg = U().div('fg'); fg.innerHTML = `<label class="fl">${f.lbl}</label>`;
+      const inp = U().el('input', 'fi' + (App.errors[f.ek] ? ' err' : ''));
+      inp.id = f.id; inp.value = f.val || '';
+      fg.appendChild(inp); r1.appendChild(fg);
+    });
+    card.appendChild(r1);
+
+    // Desc row
+    const r2 = U().div('fr');
+    [{ id: 'fdvi', lbl: 'Mô tả (VI)', val: comic.descVI || '' },
+     { id: 'fden', lbl: 'Description (EN)', val: comic.descEN || '' }].forEach(f => {
+      const fg = U().div('fg'); fg.innerHTML = `<label class="fl">${f.lbl}</label>`;
+      const ta = U().el('textarea', 'fi'); ta.id = f.id; ta.value = f.val; ta.rows = 3; fg.appendChild(ta); r2.appendChild(fg);
+    });
+    card.appendChild(r2);
+
+    // Genre + Status row
+    const r3 = U().div('fr');
+    const genreFg = U().div('fg'); genreFg.innerHTML = '<label class="fl">Thể loại</label>';
+    const genreSel = U().el('select', 'fi'); genreSel.id = 'fgenre';
+    [['action','Hành động'],['romance','Tình cảm'],['comedy','Hài hước'],['mystery','Trinh thám'],['fantasy','Kỳ ảo']].forEach(([v,l]) => {
+      const o = U().el('option'); o.value=v; o.textContent=l; if(v===comic.genre)o.selected=true; genreSel.appendChild(o);
+    });
+    genreFg.appendChild(genreSel);
+
+    const statusFg = U().div('fg'); statusFg.innerHTML = '<label class="fl">Trạng thái</label>';
+    const statusSel = U().el('select', 'fi'); statusSel.id = 'fstatus';
+    [['published','Công khai'],['draft','Nháp']].forEach(([v,l]) => {
+      const o = U().el('option'); o.value=v; o.textContent=l; if(v===comic.status)o.selected=true; statusSel.appendChild(o);
+    });
+    statusFg.appendChild(statusSel);
+    r3.appendChild(genreFg); r3.appendChild(statusFg); card.appendChild(r3);
+    w.appendChild(card);
+
+    const btns = U().div(); btns.style.cssText = 'display:flex;gap:8px';
+    btns.appendChild(U().mkBtn('btn-primary', '✓ Lưu thay đổi', () => saveEditComic(comic.id)));
+    btns.appendChild(U().mkBtn('btn-ghost', '← Hủy', () => { App.coverData = null; go('library'); }));
+    w.appendChild(btns);
+    return w;
+  }
+
+  async function saveEditComic(comicId) {
+    if (App.isSaving) return; App.isSaving = true;
+    const vi = (document.getElementById('fvi')?.value || '').trim();
+    if (!vi) { App.errors = { titleVI: 'Tên truyện không được để trống' }; App.isSaving = false; UI.renderContent(); return; }
+
+    UI.showLoading('Đang lưu...');
+    const comic = App.comics.find(c => c.id === comicId);
+    if (comic) {
+      comic.titleVI = vi;
+      comic.titleEN = (document.getElementById('fen')?.value || '').trim();
+      comic.descVI  = document.getElementById('fdvi')?.value || '';
+      comic.descEN  = document.getElementById('fden')?.value || '';
+      comic.genre   = document.getElementById('fgenre')?.value  || 'action';
+      comic.status  = document.getElementById('fstatus')?.value || 'published';
+      if (App.coverData) comic.cover = App.coverData;
+    }
+    try {
+      await DB.saveMeta();
+      UI.hideLoading(); App.coverData = null; App.errors = {}; go('library');
+    } catch(e) {
+      UI.hideLoading(); alert('Lỗi lưu: ' + e.message); App.isSaving = false;
+    }
   }
 
   /* ════ CHAPTERS ═══════════════════════════════════════ */
@@ -331,10 +430,7 @@ window.Admin = (() => {
     hdr.appendChild(hl); hdr.appendChild(addBtns); w.appendChild(hdr);
 
     const tabs=U().div('tabs');
-    const visibleComics = window.CURRENT_ROLE === 'publisher'
-      ? App.comics.filter(m => m.created_by === window.CURRENT_PROFILE?.id)
-      : App.comics;
-    visibleComics.forEach(m=>{const t=U().div('tab'+(m.id===comic.id?' active':''));t.textContent=m.titleVI||'?';t.addEventListener('click',()=>{App.selComicId=m.id;UI.renderContent();UI.renderNav();});tabs.appendChild(t);});
+    App.comics.forEach(m=>{const t=U().div('tab'+(m.id===comic.id?' active':''));t.textContent=m.titleVI||'?';t.addEventListener('click',()=>{App.selComicId=m.id;UI.renderContent();UI.renderNav();});tabs.appendChild(t);});
     w.appendChild(tabs);
 
     const chaps=comic.chapters||[];
@@ -708,12 +804,11 @@ window.Admin = (() => {
     UI.hideLoading();
 
     // Summary bar
-    const admins    = profiles.filter(p => p.role === 'admin').length;
-    const publishers= profiles.filter(p => p.role === 'publisher').length;
-    const users     = profiles.filter(p => p.role === 'user').length;
-    const blocked   = profiles.filter(p => p.is_blocked).length;
+    const admins = profiles.filter(p => p.role === 'admin').length;
+    const users  = profiles.filter(p => p.role === 'user').length;
+    const blocked = profiles.filter(p => p.is_blocked).length;
     const sb = U().div('stats'); sb.style.marginBottom = '16px';
-    [[profiles.length,'Tổng'],[admins,'Admin'],[publishers,'Publisher'],[users,'User'],[blocked,'Bị khóa']].forEach(([v,l])=>{
+    [[profiles.length,'Tổng'],[admins,'Admin'],[users,'User'],[blocked,'Bị khóa']].forEach(([v,l])=>{
       sb.innerHTML += `<div class="sc"><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
     });
     w.appendChild(sb);
@@ -725,7 +820,7 @@ window.Admin = (() => {
     const emailInp = U().el('input','fi'); emailInp.placeholder='Email'; emailInp.type='email'; emailInp.style.flex='1';
     const passInp  = U().el('input','fi'); passInp.placeholder='Mật khẩu (≥6 ký tự)'; passInp.type='password'; passInp.style.flex='1';
     const roleSelA = U().el('select','fi'); roleSelA.style.cssText='width:auto;font-size:12px;padding:7px 10px';
-    [['user','User'],['publisher','Publisher'],['admin','Admin']].forEach(([v,l])=>{ const o=U().el('option');o.value=v;o.textContent=l;roleSelA.appendChild(o); });
+    [['user','User'],['admin','Admin']].forEach(([v,l])=>{ const o=U().el('option');o.value=v;o.textContent=l;roleSelA.appendChild(o); });
     const addMsg = U().div(); addMsg.style.cssText='font-size:11px;margin-top:6px;display:none';
     const addBtn = U().mkBtn('btn-primary btn-xs','+ Tạo', async()=>{
       const email=emailInp.value.trim(), pass=passInp.value, role=roleSelA.value;
@@ -736,8 +831,8 @@ window.Admin = (() => {
       // Với anon key: dùng signUp (user tự đăng ký), sau đó update role
       const { data, error } = await window._sb.auth.signUp({ email, password: pass });
       if(error){ addMsg.style.display='block';addMsg.style.color='#e05555';addMsg.textContent=error.message; addBtn.disabled=false;addBtn.textContent='+ Tạo';return; }
-      if(data?.user && role !== 'user'){
-        await window._sb.from('profiles').upsert({id:data.user.id,email,role},{onConflict:'id'});
+      if(data?.user && role==='admin'){
+        await window._sb.from('profiles').upsert({id:data.user.id,email,role:'admin'},{onConflict:'id'});
       }
       addMsg.style.display='block';addMsg.style.color='#4caf50';addMsg.textContent=`✓ Đã tạo tài khoản ${email}`;
       emailInp.value=''; passInp.value='';
@@ -782,7 +877,7 @@ window.Admin = (() => {
       // Role selector
       const td2 = U().el('td'); td2.style.padding='10px 14px';
       const roleSel = U().el('select'); roleSel.style.cssText='background:#111;border:1px solid #2a2a30;border-radius:4px;padding:4px 7px;color:#e8e6e0;font-size:11px;cursor:pointer;font-family:inherit';
-      [['user','User'],['publisher','Publisher'],['admin','Admin']].forEach(([v,l])=>{
+      [['user','User'],['admin','Admin']].forEach(([v,l])=>{
         const o=U().el('option');o.value=v;o.textContent=l;if(v===p.role)o.selected=true;roleSel.appendChild(o);
       });
       if(isMe) roleSel.disabled=true; // không tự đổi role của mình
@@ -810,10 +905,25 @@ window.Admin = (() => {
 
       const delBtn = U().mkBtn('btn-danger btn-xs','🗑 Xóa', async()=>{
         if(isMe){alert('Không thể xóa tài khoản của chính mình');return;}
-        if(!confirm(`Xóa tài khoản ${p.email}?\nHành động này không thể hoàn tác.`))return;
-        // Xóa profile (cascade xóa history + bookmarks)
-        await window._sb.from('profiles').delete().eq('id',p.id);
-        await viewUsers(container); container.innerHTML=''; await viewUsers(container);
+        if(!confirm(`Xóa tài khoản ${p.email}?\n\nSẽ xóa lịch sử đọc và bookmark.\nTài khoản sẽ bị khóa và không đăng nhập được nữa.\n(Xóa hoàn toàn khỏi hệ thống cần dùng Supabase Dashboard)`))return;
+        delBtn.disabled=true; delBtn.textContent='...';
+        try {
+          // 1. Xóa data liên quan
+          await window._sb.from('reading_history').delete().eq('user_id',p.id);
+          await window._sb.from('bookmarks').delete().eq('user_id',p.id);
+          // 2. Khóa vĩnh viễn + đánh dấu deleted trong profile
+          await window._sb.from('profiles').update({
+            is_blocked: true,
+            display_name: '[Đã xóa]',
+            email: p.email,
+            role: 'user',
+          }).eq('id',p.id);
+          // 3. Reload
+          container.innerHTML=''; await viewUsers(container);
+        } catch(e) {
+          alert('Lỗi: '+e.message);
+          delBtn.disabled=false; delBtn.textContent='🗑 Xóa';
+        }
       });
 
       [blockBtn, delBtn].forEach(b=>acts.appendChild(b));
@@ -849,5 +959,5 @@ window.Admin = (() => {
     return d.toLocaleDateString('vi-VN');
   }
 
-  return { viewLibrary, viewAddComic, viewChapters, viewAddChapter, viewEditChapter, viewSettings, viewAnalytics, viewUsers };
+  return { viewLibrary, viewAddComic, viewEditComic, viewChapters, viewAddChapter, viewEditChapter, viewSettings, viewAnalytics, viewUsers };
 })();
