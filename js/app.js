@@ -135,11 +135,10 @@ async function init() {
     return;
   }
 
-  // Admin check + data load đã được xử lý trong Auth.onSignedIn()
-  // (chạy qua onAuthStateChange sau khi JWT sẵn sàng)
-  // Không check ở đây tránh race condition khi reload trang.
-  // onAuthStateChange sẽ tự fire SIGNED_IN và gọi onSignedIn().
+  // Có session rồi → chạy admin check + load ngay
+  // (không đợi onAuthStateChange vì reload trang không fire SIGNED_IN)
   UI.hideLoading();
+  await Auth.handleExistingSession();
 }
 
 /* Màn hình từ chối truy cập cho user thường */

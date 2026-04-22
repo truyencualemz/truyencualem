@@ -55,7 +55,11 @@ async function initUser() {
   const user = await Auth.init();
   if (!user) { hideLoading(); Auth.showAuthUI(); return; }
 
-  // Cập nhật header
+  // Có session → khởi tạo UI ngay (reload trang không fire SIGNED_IN)
+  await loadUserUI(user);
+}
+
+async function loadUserUI(user) {
   const meta        = user.user_metadata || {};
   const displayName = meta.full_name || meta.name || user.email || '';
   const avatarUrl   = meta.avatar_url || meta.picture || '';
