@@ -314,7 +314,7 @@ window.Admin = (() => {
     App.comics.push({ id: 'c' + Date.now(), titleVI: vi, titleEN: (document.getElementById('fen')?.value || '').trim(),
       descVI: document.getElementById('fdvi')?.value || '', descEN: document.getElementById('fden')?.value || '',
       genre: document.getElementById('fgenre')?.value || 'action', status: document.getElementById('fstatus')?.value || 'published',
-      cover: App.coverData || null, chapters: [] });
+      cover: App.coverData || null, createdBy: Auth.getUserId(), chapters: [] });
     await DB.saveMeta(); UI.hideLoading(); App.coverData = null; App.errors = {}; go('library');
   }
 
@@ -804,11 +804,12 @@ window.Admin = (() => {
     UI.hideLoading();
 
     // Summary bar
-    const admins = profiles.filter(p => p.role === 'admin').length;
-    const users  = profiles.filter(p => p.role === 'user').length;
-    const blocked = profiles.filter(p => p.is_blocked).length;
+    const admins     = profiles.filter(p => p.role === 'admin').length;
+    const publishers = profiles.filter(p => p.role === 'publisher').length;
+    const users      = profiles.filter(p => p.role === 'user').length;
+    const blocked    = profiles.filter(p => p.is_blocked).length;
     const sb = U().div('stats'); sb.style.marginBottom = '16px';
-    [[profiles.length,'Tổng'],[admins,'Admin'],[users,'User'],[blocked,'Bị khóa']].forEach(([v,l])=>{
+    [[profiles.length,'Tổng'],[admins,'Admin'],[publishers,'Publisher'],[users,'User'],[blocked,'Bị khóa']].forEach(([v,l])=>{
       sb.innerHTML += `<div class="sc"><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
     });
     w.appendChild(sb);
@@ -820,7 +821,9 @@ window.Admin = (() => {
     const emailInp = U().el('input','fi'); emailInp.placeholder='Email'; emailInp.type='email'; emailInp.style.flex='1';
     const passInp  = U().el('input','fi'); passInp.placeholder='Mật khẩu (≥6 ký tự)'; passInp.type='password'; passInp.style.flex='1';
     const roleSelA = U().el('select','fi'); roleSelA.style.cssText='width:auto;font-size:12px;padding:7px 10px';
-    [['user','User'],['admin','Admin']].forEach(([v,l])=>{ const o=U().el('option');o.value=v;o.textContent=l;roleSelA.appendChild(o); });
+    [['user','User'],['publisher','Publisher'],['admin','Admin']].forEach(([v,l])=>{
+      const o=U().el('option');o.value=v;o.textContent=l;if(v===roleSelA.value||v==='user')o.selected=(v==='user');roleSelA.appendChild(o);
+    });
     const addMsg = U().div(); addMsg.style.cssText='font-size:11px;margin-top:6px;display:none';
     const addBtn = U().mkBtn('btn-primary btn-xs','+ Tạo', async()=>{
       const email=emailInp.value.trim(), pass=passInp.value, role=roleSelA.value;
@@ -877,7 +880,7 @@ window.Admin = (() => {
       // Role selector
       const td2 = U().el('td'); td2.style.padding='10px 14px';
       const roleSel = U().el('select'); roleSel.style.cssText='background:#111;border:1px solid #2a2a30;border-radius:4px;padding:4px 7px;color:#e8e6e0;font-size:11px;cursor:pointer;font-family:inherit';
-      [['user','User'],['admin','Admin']].forEach(([v,l])=>{
+      [['user','User'],['publisher','Publisher'],['admin','Admin']].forEach(([v,l])=>{
         const o=U().el('option');o.value=v;o.textContent=l;if(v===p.role)o.selected=true;roleSel.appendChild(o);
       });
       if(isMe) roleSel.disabled=true; // không tự đổi role của mình

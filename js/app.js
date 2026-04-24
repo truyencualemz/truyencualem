@@ -40,17 +40,25 @@ function buildNav() {
 
   nav.appendChild(Object.assign(UI.div('ns'), { textContent: 'Hệ thống' }));
 
+  const role = window.CURRENT_ROLE || 'admin';
+
   const an = UI.div('nv'+(App.view==='analytics'?' active':''));
   an.innerHTML = `<svg class="nic" viewBox="0 0 16 16" fill="currentColor"><path d="M0 13h1V6h3v7h1V4h3v9h1V8h3v5h1v1H0z"/></svg>Thống kê`;
   an.addEventListener('click', () => App.go('analytics')); nav.appendChild(an);
 
-  const un = UI.div('nv'+(App.view==='users'?' active':''));
-  un.innerHTML = `<svg class="nic" viewBox="0 0 16 16" fill="currentColor"><path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM2.5 14s-1 0-1-1 1-4 6.5-4 6.5 3 6.5 4-1 1-1 1H2.5z"/></svg>Users`;
-  un.addEventListener('click', () => App.go('users')); nav.appendChild(un);
+  // Users: chỉ admin mới thấy
+  if (role === 'admin') {
+    const un = UI.div('nv'+(App.view==='users'?' active':''));
+    un.innerHTML = `<svg class="nic" viewBox="0 0 16 16" fill="currentColor"><path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM2.5 14s-1 0-1-1 1-4 6.5-4 6.5 3 6.5 4-1 1-1 1H2.5z"/></svg>Users`;
+    un.addEventListener('click', () => App.go('users')); nav.appendChild(un);
+  }
 
-  const si = UI.div('nv'+(App.view==='settings'?' active':''));
-  si.innerHTML = `<svg class="nic" viewBox="0 0 16 16" fill="currentColor"><path d="M7 1a1 1 0 0 0-1 1v.5A5.5 5.5 0 0 0 4.6 3.08l-.35-.35a1 1 0 1 0-1.42 1.42l.35.35A5.5 5.5 0 0 0 2.5 6H2a1 1 0 0 0 0 2h.5c.09.5.25.97.48 1.4l-.35.35a1 1 0 1 0 1.42 1.42l.35-.35c.43.23.9.39 1.4.48V12a1 1 0 0 0 2 0v-.5c.5-.09.97-.25 1.4-.48l.35.35a1 1 0 1 0 1.42-1.42l-.35-.35c.23-.43.39-.9.48-1.4H12a1 1 0 0 0 0-2h-.5a5.5 5.5 0 0 0-.48-1.4l.35-.35a1 1 0 1 0-1.42-1.42l-.35.35A5.5 5.5 0 0 0 8 2.5V2a1 1 0 0 0-1-1zm0 4a3 3 0 1 1 0 6A3 3 0 0 1 7 5z"/></svg>Cài đặt`;
-  si.addEventListener('click', () => App.go('settings')); nav.appendChild(si);
+  // Cài đặt: chỉ admin mới thấy
+  if (role === 'admin') {
+    const si = UI.div('nv'+(App.view==='settings'?' active':''));
+    si.innerHTML = `<svg class="nic" viewBox="0 0 16 16" fill="currentColor"><path d="M7 1a1 1 0 0 0-1 1v.5A5.5 5.5 0 0 0 4.6 3.08l-.35-.35a1 1 0 1 0-1.42 1.42l.35.35A5.5 5.5 0 0 0 2.5 6H2a1 1 0 0 0 0 2h.5c.09.5.25.97.48 1.4l-.35.35a1 1 0 1 0 1.42 1.42l.35-.35c.43.23.9.39 1.4.48V12a1 1 0 0 0 2 0v-.5c.5-.09.97-.25 1.4-.48l.35.35a1 1 0 1 0 1.42-1.42l-.35-.35c.23-.43.39-.9.48-1.4H12a1 1 0 0 0 0-2h-.5a5.5 5.5 0 0 0-.48-1.4l.35-.35a1 1 0 1 0-1.42-1.42l-.35.35A5.5 5.5 0 0 0 8 2.5V2a1 1 0 0 0-1-1zm0 4a3 3 0 1 1 0 6A3 3 0 0 1 7 5z"/></svg>Cài đặt`;
+    si.addEventListener('click', () => App.go('settings')); nav.appendChild(si);
+  }
 
   // User info + sign out at bottom
   const user = Auth.getUser();
@@ -94,8 +102,8 @@ function buildContent() {
     case 'add-text-chapter':   c.appendChild(TextEditor.buildForm(false)); break;
     case 'edit-text-chapter':  c.appendChild(TextEditor.buildForm(true));  break;
     case 'analytics':          Admin.viewAnalytics(c);                break;
-    case 'users':              Admin.viewUsers(c);                    break;
-    case 'settings':           Admin.viewSettings(c);                  break;
+    case 'users':      if(window.CURRENT_ROLE==='admin')Admin.viewUsers(c);      else c.innerHTML='<div style="padding:40px;text-align:center;color:#555">Không có quyền.</div>'; break;
+    case 'settings':   if(window.CURRENT_ROLE==='admin')Admin.viewSettings(c);   else c.innerHTML='<div style="padding:40px;text-align:center;color:#555">Không có quyền.</div>'; break;
   }
 }
 

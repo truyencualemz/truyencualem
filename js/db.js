@@ -20,22 +20,31 @@ window.DB = (() => {
     const uid = Auth.getUserId();
     if (!uid) { App.comics = []; return; }
 
-    // Load tất cả truyện của chính mình (kể cả draft)
-    const comics = await must(
-      sb().from('comics').select('*').eq('user_id', uid).order('sort_order')
-    );
+    const role = window.CURRENT_ROLE || 'user';
+
+    let query = sb().from('comics').select('*').order('sort_order');
+    // Admin: thấy tất cả truyện của mình
+    // Publisher: chỉ thấy truyện mình tạo
+    if (role === 'publisher') {
+      query = query.eq('created_by', uid);
+    } else {
+      query = query.eq('user_id', uid);
+    }
+
+    const comics = await must(query);
     const ids = comics.map(c => c.id);
     const chapters = ids.length ? await must(
       sb().from('chapters').select('*').in('comic_id', ids).order('num')
     ) : [];
 
     App.comics = comics.map((c, i) => ({
-      id:      c.id,
-      titleVI: c.title_vi,   titleEN: c.title_en,
-      descVI:  c.desc_vi,    descEN:  c.desc_en,
-      genre:   c.genre,      status:  c.status,
-      cover:   c.cover,      _order:  c.sort_order ?? i,
-      isOwner: true,
+      id:        c.id,
+      titleVI:   c.title_vi,   titleEN: c.title_en,
+      descVI:    c.desc_vi,    descEN:  c.desc_en,
+      genre:     c.genre,      status:  c.status,
+      cover:     c.cover,      _order:  c.sort_order ?? i,
+      createdBy: c.created_by,
+      isOwner:   true,
       chapters: chapters
         .filter(ch => ch.comic_id === c.id)
         .map(ch => ({
@@ -67,6 +76,7 @@ window.DB = (() => {
       const m = App.comics[i];
       await must(sb().from('comics').upsert({
         id: m.id, user_id: uid,
+        created_by: m.createdBy || uid,
         title_vi: m.titleVI,       title_en: m.titleEN || '',
         desc_vi:  m.descVI  || '', desc_en:  m.descEN  || '',
         genre: m.genre || 'action', status: m.status || 'published',
