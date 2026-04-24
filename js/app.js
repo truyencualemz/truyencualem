@@ -84,9 +84,9 @@ function buildTopbar() {
   document.querySelector('#topbar-left .ts').textContent = S[App.view] || '';
   const right = document.getElementById('topbar-right'); right.innerHTML = '';
   // Theme toggle
-  const themeBtn = Theme.buildToggleBtn('margin-right:6px');
-  right.appendChild(themeBtn);
-  Theme.updateButtons();
+  if (window.Theme) {
+    const themeBtn = Theme.buildToggleBtn('margin-right:6px'); right.appendChild(themeBtn);
+  }
   if (App.view==='library')
     right.appendChild(UI.mkBtn('btn-primary','+ Thêm truyện',()=>{ App.coverData=null; App.go('add-comic'); }));
   else if (['add-comic','edit-comic',...CHAP_VIEWS].includes(App.view))
