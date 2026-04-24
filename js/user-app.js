@@ -43,6 +43,13 @@ const GENRES = [
    INIT
 ══════════════════════════════════════════════════════════ */
 async function initUser() {
+  // Áp dụng theme ngay (Theme đã load từ theme.js)
+  // Wire up theme button — không dùng inline onclick vì scripts load sau DOM
+  document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
+    Theme.cycle();
+    Theme.updateButtons();
+  });
+  Theme.updateButtons(); // sync label ngay khi load
   showLoading('Đang khởi động...');
 
   if (!window.SUPABASE_URL || window.SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
@@ -121,6 +128,8 @@ Lỗi tải truyện: ${U.esc(e.message)}<br>
   }
 
   hideLoading();
+  // Hiển thị thông báo hệ thống (nếu có)
+  try { await Announce.renderBanners(document.getElementById('app')); } catch(e) { /* ignore */ }
   renderTab('home');
 }
 

@@ -706,6 +706,7 @@ window.Admin = (() => {
     });
 
     w.appendChild(gdCard);
+    w.appendChild(Announce.buildAdminSection());
     w.appendChild(storeCard);
     w.appendChild(verCard);
     w.appendChild(delBtn);
