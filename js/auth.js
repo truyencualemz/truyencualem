@@ -43,8 +43,7 @@ window.Auth = (() => {
   async function onSignedIn() {
     document.getElementById('auth-overlay')?.remove();
 
-    const isUserPage = typeof loadUserUI === 'function'
-      && window.location.pathname.includes('user');
+    const isUserPage = window.IS_USER_PAGE === true;
 
     if (isUserPage) {
       // user-app.js: gọi loadUserUI khi đăng nhập mới
@@ -202,7 +201,7 @@ window.Auth = (() => {
     const box = document.createElement('div');
     box.style.cssText = 'background:#18181c;border:1px solid #2a2a30;border-radius:12px;padding:28px 32px;width:340px;max-width:100%';
 
-    const isAdminPage = !window.location.pathname.includes('user');
+    const isAdminPage = !window.IS_USER_PAGE;
     const subtitle    = isAdminPage ? 'Admin' : 'Đọc truyện';
 
     renderLoginForm(box, subtitle, isAdminPage);
