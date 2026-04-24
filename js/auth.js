@@ -196,10 +196,10 @@ window.Auth = (() => {
 
     const overlay = document.createElement('div');
     overlay.id = 'auth-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:#0f0f11;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg-app);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
 
     const box = document.createElement('div');
-    box.style.cssText = 'background:#18181c;border:1px solid #2a2a30;border-radius:12px;padding:28px 32px;width:340px;max-width:100%';
+    box.style.cssText = 'background:var(--bg-primary);border:1px solid var(--border);border-radius:12px;padding:28px 32px;width:340px;max-width:100%';
 
     const isAdminPage = !window.IS_USER_PAGE;
     const subtitle    = isAdminPage ? 'Admin' : 'Đọc truyện';
@@ -211,47 +211,47 @@ window.Auth = (() => {
   /* ── Form đăng nhập ── */
   function renderLoginForm(box, subtitle = 'Admin', adminMode = false) {
     box.innerHTML = `
-<div style="font-family:monospace;font-size:13px;color:#c8a96e;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">MangaDesk</div>
-<div style="font-size:11px;color:#444;margin-bottom:22px">${subtitle}</div>
+<div style="font-family:monospace;font-size:13px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">MangaDesk</div>
+<div style="font-size:11px;color:var(--text-muted);margin-bottom:22px">${subtitle}</div>
 <div id="auth-msg" style="display:none;border-radius:6px;padding:9px 12px;font-size:11px;margin-bottom:14px"></div>
 
 <div style="margin-bottom:10px">
-  <label style="font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Email</label>
+  <label style="font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Email</label>
   <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email"
-    style="width:100%;background:#111;border:1px solid #2a2a30;border-radius:6px;padding:9px 12px;color:#e8e6e0;font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
-    onfocus="this.style.borderColor='#c8a96e'" onblur="this.style.borderColor='#2a2a30'">
+    style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text-primary);font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
+    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
 </div>
 <div style="margin-bottom:6px">
-  <label style="font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Mật khẩu</label>
+  <label style="font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Mật khẩu</label>
   <input id="auth-pass" type="password" placeholder="••••••••" autocomplete="current-password"
-    style="width:100%;background:#111;border:1px solid #2a2a30;border-radius:6px;padding:9px 12px;color:#e8e6e0;font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
-    onfocus="this.style.borderColor='#c8a96e'" onblur="this.style.borderColor='#2a2a30'">
+    style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text-primary);font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
+    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
 </div>
 <div style="text-align:right;margin-bottom:16px">
-  <button id="auth-forgot-btn" style="background:none;border:none;color:#555;font-size:11px;cursor:pointer;padding:0;font-family:inherit">Quên mật khẩu?</button>
+  <button id="auth-forgot-btn" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:0;font-family:inherit">Quên mật khẩu?</button>
 </div>
 
 <button id="auth-login-btn"
-  style="width:100%;background:#c8a96e;color:#18181c;border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:inherit">
+  style="width:100%;background:var(--accent);color:var(--bg-primary);border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:inherit">
   Đăng nhập
 </button>
 
 ${adminMode ? `
-<div style="margin-top:8px;padding:10px;background:#111;border-radius:6px;font-size:11px;color:#444;text-align:center;line-height:1.6">
+<div style="margin-top:8px;padding:10px;background:var(--bg-secondary);border-radius:6px;font-size:11px;color:var(--text-muted);text-align:center;line-height:1.6">
   Trang Admin chỉ dành cho tài khoản được cấp quyền.<br>
   Liên hệ Admin để được tạo tài khoản.
 </div>
 ` : `
 <button id="auth-register-btn"
-  style="width:100%;background:transparent;color:#888;border:1px solid #2a2a30;border-radius:6px;padding:10px;font-size:12px;cursor:pointer;margin-bottom:16px;font-family:inherit">
+  style="width:100%;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px;cursor:pointer;margin-bottom:16px;font-family:inherit">
   Tạo tài khoản mới
 </button>
 <div style="position:relative;text-align:center;margin-bottom:14px">
-  <span style="font-size:10px;color:#333;background:#18181c;padding:0 8px;position:relative;z-index:1">hoặc</span>
-  <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:#2a2a30"></div>
+  <span style="font-size:10px;color:var(--border);background:var(--bg-primary);padding:0 8px;position:relative;z-index:1">hoặc</span>
+  <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border)"></div>
 </div>
 <button id="auth-google-btn"
-  style="width:100%;background:#111;color:#ccc;border:1px solid #2a2a30;border-radius:6px;padding:10px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+  style="width:100%;background:var(--bg-secondary);color:#ccc;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
   <svg width="15" height="15" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.6 2.2 30.1 0 24 0 14.6 0 6.6 5.5 2.6 13.5l7.8 6C12.3 13.1 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17z"/><path fill="#FBBC05" d="M10.4 28.5c-.5-1.5-.8-3-.8-4.5s.3-3 .8-4.5l-7.8-6C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.5l7.8-6z"/><path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.4l-7.5-5.8c-2 1.4-4.6 2.2-7.4 2.2-6.3 0-11.7-3.6-13.6-9l-7.8 6C6.6 42.5 14.6 48 24 48z"/></svg>
   Đăng nhập với Google
 </button>
@@ -318,22 +318,22 @@ ${adminMode ? `
   /* ── Form quên mật khẩu ── */
   function renderForgotForm(box, subtitle = '') {
     box.innerHTML = `
-<div style="font-family:monospace;font-size:13px;color:#c8a96e;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">MangaDesk</div>
-<div style="font-size:11px;color:#444;margin-bottom:22px">Đặt lại mật khẩu</div>
+<div style="font-family:monospace;font-size:13px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">MangaDesk</div>
+<div style="font-size:11px;color:var(--text-muted);margin-bottom:22px">Đặt lại mật khẩu</div>
 <div id="auth-msg" style="display:none;border-radius:6px;padding:9px 12px;font-size:11px;margin-bottom:14px"></div>
-<p style="font-size:12px;color:#888;margin-bottom:14px;line-height:1.6">Nhập email đã đăng ký. Chúng tôi sẽ gửi link để đặt lại mật khẩu.</p>
+<p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">Nhập email đã đăng ký. Chúng tôi sẽ gửi link để đặt lại mật khẩu.</p>
 <div style="margin-bottom:16px">
-  <label style="font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Email</label>
+  <label style="font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Email</label>
   <input id="auth-email" type="email" placeholder="you@example.com"
-    style="width:100%;background:#111;border:1px solid #2a2a30;border-radius:6px;padding:9px 12px;color:#e8e6e0;font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
-    onfocus="this.style.borderColor='#c8a96e'" onblur="this.style.borderColor='#2a2a30'">
+    style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text-primary);font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
+    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
 </div>
 <button id="auth-reset-btn"
-  style="width:100%;background:#c8a96e;color:#18181c;border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;font-family:inherit">
+  style="width:100%;background:var(--accent);color:var(--bg-primary);border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;font-family:inherit">
   Gửi link đặt lại mật khẩu
 </button>
 <button id="auth-back-btn"
-  style="width:100%;background:transparent;color:#666;border:1px solid #2a2a30;border-radius:6px;padding:9px;font-size:12px;cursor:pointer;font-family:inherit">
+  style="width:100%;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:9px;font-size:12px;cursor:pointer;font-family:inherit">
   ← Quay lại đăng nhập
 </button>`;
 
@@ -368,25 +368,25 @@ ${adminMode ? `
     document.getElementById('auth-overlay')?.remove();
     const overlay = document.createElement('div');
     overlay.id = 'auth-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:#0f0f11;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg-app);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
     const box = document.createElement('div');
-    box.style.cssText = 'background:#18181c;border:1px solid #2a2a30;border-radius:12px;padding:28px 32px;width:340px;max-width:100%';
+    box.style.cssText = 'background:var(--bg-primary);border:1px solid var(--border);border-radius:12px;padding:28px 32px;width:340px;max-width:100%';
     box.innerHTML = `
-<div style="font-family:monospace;font-size:13px;color:#c8a96e;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">MangaDesk</div>
-<div style="font-size:11px;color:#444;margin-bottom:22px">Đặt mật khẩu mới</div>
+<div style="font-family:monospace;font-size:13px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">MangaDesk</div>
+<div style="font-size:11px;color:var(--text-muted);margin-bottom:22px">Đặt mật khẩu mới</div>
 <div id="reset-msg" style="display:none;border-radius:6px;padding:9px 12px;font-size:11px;margin-bottom:14px"></div>
 <div style="margin-bottom:14px">
-  <label style="font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Mật khẩu mới</label>
+  <label style="font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Mật khẩu mới</label>
   <input id="new-pass" type="password" placeholder="Ít nhất 6 ký tự"
-    style="width:100%;background:#111;border:1px solid #2a2a30;border-radius:6px;padding:9px 12px;color:#e8e6e0;font-size:13px;outline:none;font-family:inherit">
+    style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text-primary);font-size:13px;outline:none;font-family:inherit">
 </div>
 <div style="margin-bottom:18px">
-  <label style="font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Xác nhận mật khẩu</label>
+  <label style="font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Xác nhận mật khẩu</label>
   <input id="new-pass-confirm" type="password" placeholder="Nhập lại mật khẩu"
-    style="width:100%;background:#111;border:1px solid #2a2a30;border-radius:6px;padding:9px 12px;color:#e8e6e0;font-size:13px;outline:none;font-family:inherit">
+    style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text-primary);font-size:13px;outline:none;font-family:inherit">
 </div>
 <button id="set-pass-btn"
-  style="width:100%;background:#c8a96e;color:#18181c;border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+  style="width:100%;background:var(--accent);color:var(--bg-primary);border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
   Lưu mật khẩu mới
 </button>`;
 
@@ -437,23 +437,23 @@ ${adminMode ? `
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px';
 
     const box = document.createElement('div');
-    box.style.cssText = 'background:#18181c;border:1px solid #2a2a30;border-radius:12px;padding:28px 32px;width:380px;max-width:100%';
+    box.style.cssText = 'background:var(--bg-primary);border:1px solid var(--border);border-radius:12px;padding:28px 32px;width:380px;max-width:100%';
 
     box.innerHTML = `
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-  <div style="font-family:monospace;font-size:13px;color:#c8a96e">Thông tin tài khoản</div>
-  <button id="profile-close" style="background:none;border:none;color:#555;font-size:16px;cursor:pointer;padding:0;line-height:1">✕</button>
+  <div style="font-family:monospace;font-size:13px;color:var(--accent)">Thông tin tài khoản</div>
+  <button id="profile-close" style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:0;line-height:1">✕</button>
 </div>
 
 <!-- Avatar + email -->
-<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #2a2a30">
-  <div style="width:52px;height:52px;border-radius:50%;background:#2a2a30;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px">
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+  <div style="width:52px;height:52px;border-radius:50%;background:var(--border);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px">
     ${avatar ? `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover">` : `<span>${(name||email).charAt(0).toUpperCase()||'?'}</span>`}
   </div>
   <div style="min-width:0">
     <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name||'Chưa đặt tên'}</div>
-    <div style="font-size:11px;color:#555;margin-top:2px">${email}</div>
-    <div style="font-size:10px;color:#444;margin-top:3px">Đăng nhập qua: <b style="color:#666">${provider}</b></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${email}</div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Đăng nhập qua: <b style="color:var(--text-muted)">${provider}</b></div>
   </div>
 </div>
 
@@ -461,31 +461,31 @@ ${adminMode ? `
 
 <!-- Tên hiển thị -->
 <div style="margin-bottom:14px">
-  <label style="font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Tên hiển thị</label>
+  <label style="font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Tên hiển thị</label>
   <input id="profile-name" type="text" value="${name.replace(/"/g,'&quot;')}" placeholder="Tên của bạn"
-    style="width:100%;background:#111;border:1px solid #2a2a30;border-radius:6px;padding:9px 12px;color:#e8e6e0;font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
-    onfocus="this.style.borderColor='#c8a96e'" onblur="this.style.borderColor='#2a2a30'">
+    style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text-primary);font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
+    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
 </div>
 
 <!-- Đổi mật khẩu (chỉ hiện nếu đăng nhập bằng email) -->
 ${provider === 'email' ? `
-<div style="border-top:1px solid #2a2a30;padding-top:16px;margin-top:4px;margin-bottom:14px">
-  <div style="font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Đổi mật khẩu</div>
+<div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;margin-bottom:14px">
+  <div style="font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Đổi mật khẩu</div>
   <input id="profile-pass-new" type="password" placeholder="Mật khẩu mới (để trống nếu không đổi)"
-    style="width:100%;background:#111;border:1px solid #2a2a30;border-radius:6px;padding:9px 12px;color:#e8e6e0;font-size:13px;outline:none;font-family:inherit;margin-bottom:8px;transition:border-color .15s"
-    onfocus="this.style.borderColor='#c8a96e'" onblur="this.style.borderColor='#2a2a30'">
+    style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text-primary);font-size:13px;outline:none;font-family:inherit;margin-bottom:8px;transition:border-color .15s"
+    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
   <input id="profile-pass-confirm" type="password" placeholder="Xác nhận mật khẩu mới"
-    style="width:100%;background:#111;border:1px solid #2a2a30;border-radius:6px;padding:9px 12px;color:#e8e6e0;font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
-    onfocus="this.style.borderColor='#c8a96e'" onblur="this.style.borderColor='#2a2a30'">
+    style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text-primary);font-size:13px;outline:none;font-family:inherit;transition:border-color .15s"
+    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
 </div>` : ''}
 
 <div style="display:flex;gap:8px">
   <button id="profile-save"
-    style="flex:1;background:#c8a96e;color:#18181c;border:none;border-radius:6px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
+    style="flex:1;background:var(--accent);color:var(--bg-primary);border:none;border-radius:6px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
     Lưu thay đổi
   </button>
   <button id="profile-signout"
-    style="background:transparent;color:#888;border:1px solid #2a2a30;border-radius:6px;padding:10px 14px;font-size:12px;cursor:pointer;font-family:inherit">
+    style="background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:12px;cursor:pointer;font-family:inherit">
     Đăng xuất
   </button>
 </div>`;

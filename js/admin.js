@@ -64,7 +64,7 @@ window.Admin = (() => {
 
     // Search input
     const searchWrap = U().div(); searchWrap.style.cssText = 'position:relative;flex:1;min-width:160px';
-    const searchIcon = U().div(); searchIcon.style.cssText = 'position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#555;pointer-events:none;font-size:13px'; searchIcon.textContent = '🔍';
+    const searchIcon = U().div(); searchIcon.style.cssText = 'position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;font-size:13px'; searchIcon.textContent = '🔍';
     const searchInp = U().el('input','fi'); searchInp.id='lib-search'; searchInp.placeholder='Tìm tên truyện...'; searchInp.value = LibState.q;
     searchInp.style.cssText = 'padding-left:30px;font-size:12px';
     searchInp.addEventListener('input', () => { LibState.q = searchInp.value; refreshGrid(w); });
@@ -139,7 +139,7 @@ window.Admin = (() => {
 
   function buildGrid(container) {
     const list = filterComics();
-    const resultInfo = U().div(); resultInfo.style.cssText = 'font-size:11px;color:#555;margin-bottom:10px';
+    const resultInfo = U().div(); resultInfo.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:10px';
     const total = App.comics.length;
     if (LibState.q || LibState.genre !== 'all' || LibState.status !== 'all') {
       resultInfo.textContent = `${list.length} / ${total} truyện`;
@@ -149,9 +149,9 @@ window.Admin = (() => {
     container.appendChild(resultInfo);
 
     if (!list.length) {
-      const empty = U().div(); empty.style.cssText = 'text-align:center;padding:48px 20px;color:#555;font-size:13px';
+      const empty = U().div(); empty.style.cssText = 'text-align:center;padding:48px 20px;color:var(--text-muted);font-size:13px';
       empty.innerHTML = LibState.q
-        ? `Không tìm thấy truyện nào với từ khóa "<b style="color:#888">${U().esc(LibState.q)}</b>"`
+        ? `Không tìm thấy truyện nào với từ khóa "<b style="color:var(--text-muted)">${U().esc(LibState.q)}</b>"`
         : 'Không có truyện nào khớp bộ lọc.';
       container.appendChild(empty);
     }
@@ -164,7 +164,7 @@ window.Admin = (() => {
       const genreLabel = GENRES.find(g=>g[0]===m.genre)?.[1] || m.genre || '';
       const isDraft = m.status === 'draft';
       const titleVI = LibState.q
-        ? U().esc(m.titleVI).replace(new RegExp(`(${U().esc(LibState.q)})`, 'gi'), '<mark style="background:#c8a96e33;color:#c8a96e;border-radius:2px">$1</mark>')
+        ? U().esc(m.titleVI).replace(new RegExp(`(${U().esc(LibState.q)})`, 'gi'), '<mark style="background:#c8a96e33;color:var(--accent);border-radius:2px">$1</mark>')
         : U().esc(m.titleVI);
 
       // Thumbnail
@@ -172,7 +172,7 @@ window.Admin = (() => {
       if (isDraft) thumb.style.opacity = '0.5';
       thumb.innerHTML = m.cover
         ? `<img src="${m.cover}" alt="" loading="lazy">`
-        : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
+        : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
 
       // Info
       const info = U().div('ci');
@@ -180,15 +180,15 @@ window.Admin = (() => {
 <div class="cen">${U().esc(m.titleEN)||'—'}</div>
 <div class="cm">
   <span class="badge ${isDraft?'bdr':'bok'}">${isDraft?'Nháp':'Công khai'}</span>
-  ${genreLabel?`<span class="badge" style="background:#1e1e24;color:#777;border:1px solid #2a2a30">${genreLabel}</span>`:''}
+  ${genreLabel?`<span class="badge" style="background:var(--bg-tertiary);color:var(--text-muted);border:1px solid var(--border)">${genreLabel}</span>`:''}
   <span>${chapCount} ch${textChaps>0?` · ${textChaps} chữ`:''}</span>
 </div>`;
 
       // Action bar (hiện khi hover)
-      const acts = U().div(); acts.style.cssText = 'display:flex;gap:4px;padding:6px 8px;background:#111;border-top:1px solid #2a2a30;flex-shrink:0';
+      const acts = U().div(); acts.style.cssText = 'display:flex;gap:4px;padding:6px 8px;background:var(--bg-secondary);border-top:1px solid var(--border);flex-shrink:0';
 
       // Nút sửa
-      const editBtn = U().el('button'); editBtn.style.cssText = 'flex:1;padding:4px 0;font-size:10px;border-radius:4px;border:1px solid #2a2a30;cursor:pointer;font-family:monospace;background:transparent;color:#888;transition:all .12s';
+      const editBtn = U().el('button'); editBtn.style.cssText = 'flex:1;padding:4px 0;font-size:10px;border-radius:4px;border:1px solid var(--border);cursor:pointer;font-family:monospace;background:transparent;color:var(--text-muted);transition:all .12s';
       editBtn.textContent = '✏ Sửa';
       editBtn.addEventListener('click', e => {
         e.stopPropagation();
@@ -197,7 +197,7 @@ window.Admin = (() => {
       });
 
       // Nút ẩn/hiện
-      const toggleBtn = U().el('button'); toggleBtn.style.cssText = 'flex:1;padding:4px 0;font-size:10px;border-radius:4px;border:1px solid #2a2a30;cursor:pointer;font-family:monospace;background:transparent;transition:all .12s;color:#888';
+      const toggleBtn = U().el('button'); toggleBtn.style.cssText = 'flex:1;padding:4px 0;font-size:10px;border-radius:4px;border:1px solid var(--border);cursor:pointer;font-family:monospace;background:transparent;transition:all .12s;color:var(--text-muted)';
       toggleBtn.textContent = isDraft ? '👁 Công khai' : '🙈 Ẩn';
       toggleBtn.addEventListener('click', async e => {
         e.stopPropagation();
@@ -258,8 +258,8 @@ window.Admin = (() => {
     // Cover row
     const cr = U().div(); cr.style.cssText = 'display:flex;gap:14px;align-items:flex-start;margin-bottom:14px';
     const pv = U().div(); pv.style.flexShrink = '0';
-    pv.innerHTML = `<div id="cprev" style="width:80px;height:120px;background:#111;border-radius:7px;border:1px dashed #2a2a30;display:flex;align-items:center;justify-content:center;font-size:24px;color:#333">📖</div>
-<img id="cimg" style="display:none;width:80px;height:120px;object-fit:cover;border-radius:7px;border:1px solid #2a2a30" src="" alt="">`;
+    pv.innerHTML = `<div id="cprev" style="width:80px;height:120px;background:var(--bg-secondary);border-radius:7px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--border)">📖</div>
+<img id="cimg" style="display:none;width:80px;height:120px;object-fit:cover;border-radius:7px;border:1px solid var(--border)" src="" alt="">`;
     const rs = U().div(); rs.style.flex = '1';
     const uz = U().div('uz');
     uz.innerHTML = `<input type="file" id="cf" accept="image/*"><div class="uzi">🖼️</div><div class="uzt">Click chọn ảnh bìa</div><div class="uzh">JPG PNG WebP</div>`;
@@ -329,14 +329,14 @@ window.Admin = (() => {
     }
 
     const card = U().div('fc');
-    card.innerHTML = `<div class="fct">✏ Sửa thông tin truyện — <span style="color:#c8a96e;font-family:monospace">${U().esc(comic.titleVI)}</span></div>`;
+    card.innerHTML = `<div class="fct">✏ Sửa thông tin truyện — <span style="color:var(--accent);font-family:monospace">${U().esc(comic.titleVI)}</span></div>`;
 
     // Cover row
     const cr = U().div(); cr.style.cssText = 'display:flex;gap:14px;align-items:flex-start;margin-bottom:14px';
     const pv = U().div(); pv.style.flexShrink = '0';
     const hasCover = App.coverData || comic.cover;
-    pv.innerHTML = `<div id="cprev" style="width:80px;height:120px;background:#111;border-radius:7px;border:1px dashed #2a2a30;display:flex;align-items:center;justify-content:center;font-size:24px;color:#333;${hasCover?'display:none':''}">📖</div>
-<img id="cimg" style="${hasCover?'':'display:none;'}width:80px;height:120px;object-fit:cover;border-radius:7px;border:1px solid #2a2a30" src="${U().esc(App.coverData||comic.cover||'')}" alt="">`;
+    pv.innerHTML = `<div id="cprev" style="width:80px;height:120px;background:var(--bg-secondary);border-radius:7px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--border);${hasCover?'display:none':''}">📖</div>
+<img id="cimg" style="${hasCover?'':'display:none;'}width:80px;height:120px;object-fit:cover;border-radius:7px;border:1px solid var(--border)" src="${U().esc(App.coverData||comic.cover||'')}" alt="">`;
     const rs = U().div(); rs.style.flex = '1';
     const uz = U().div('uz');
     uz.innerHTML = `<input type="file" id="cf" accept="image/*"><div class="uzi">🖼️</div><div class="uzt">Click để đổi ảnh bìa</div><div class="uzh">JPG PNG WebP</div>`;
@@ -419,11 +419,11 @@ window.Admin = (() => {
 
   /* ════ CHAPTERS ═══════════════════════════════════════ */
   function viewChapters() {
-    if (!App.comics.length) { const d=U().div(); d.innerHTML='<div style="text-align:center;padding:60px;color:#555;font-size:13px">Chưa có truyện nào.</div>'; return d; }
+    if (!App.comics.length) { const d=U().div(); d.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted);font-size:13px">Chưa có truyện nào.</div>'; return d; }
     const comic=App.getComic(); if (!comic) { App.selComicId=App.comics[0].id; return viewChapters(); }
     const w=U().div();
     const hdr=U().div(); hdr.style.cssText='display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px';
-    const hl=U().div(); hl.innerHTML=`<div style="font-family:monospace;font-size:16px">${U().esc(comic.titleVI)}</div><div style="font-size:11px;color:#555;margin-top:2px">${U().esc(comic.titleEN)||''}</div>`;
+    const hl=U().div(); hl.innerHTML=`<div style="font-family:monospace;font-size:16px">${U().esc(comic.titleVI)}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${U().esc(comic.titleEN)||''}</div>`;
     const addBtns=U().div(); addBtns.style.cssText='display:flex;gap:6px';
     addBtns.appendChild(U().mkBtn('btn-primary','+ Truyện tranh',()=>go('add-chapter',{clearPages:true})));
     addBtns.appendChild(U().mkBtn('btn-ghost','+ Truyện chữ',()=>TextEditor.openNew()));
@@ -434,7 +434,7 @@ window.Admin = (() => {
     w.appendChild(tabs);
 
     const chaps=comic.chapters||[];
-    if(!chaps.length){const d=U().div();d.innerHTML='<div style="text-align:center;padding:40px;color:#555;font-size:12px">Chưa có chương nào.</div>';w.appendChild(d);return w;}
+    if(!chaps.length){const d=U().div();d.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12px">Chưa có chương nào.</div>';w.appendChild(d);return w;}
 
     chaps.forEach((ch,idx)=>{
       const isText=ch.type==='text';
@@ -445,7 +445,7 @@ window.Admin = (() => {
       if(isText){
         const langs=(ch.languages||[]).map(l=>Translate.getLangLabel(l)).join(', ');
         info.innerHTML=`<div class="cht">📝 ${U().esc(ch.title||'Chương '+ch.num)}</div>
-<div class="chs"><span style="color:#c8a96e">Truyện chữ</span><span>${langs}</span></div>`;
+<div class="chs"><span style="color:var(--accent)">Truyện chữ</span><span>${langs}</span></div>`;
         const acts=U().div('cha');
         acts.appendChild(U().mkBtn('btn-ghost btn-sm','📖 Đọc',()=>TextReader.open(comic.id,idx)));
         acts.appendChild(U().mkBtn('btn-ghost btn-sm','✏ Sửa',()=>TextEditor.openEdit(comic.id,ch.id)));
@@ -537,7 +537,7 @@ window.Admin = (() => {
   function viewEditChapter() {
     const w = U().div(); w.style.maxWidth = '900px';
     const comic = App.getComic(), chap = comic?.chapters?.find(c => c.id === App.editingChapId);
-    if (!chap) { w.innerHTML = '<div style="color:#555">Không tìm thấy chương</div>'; return w; }
+    if (!chap) { w.innerHTML = '<div style="color:var(--text-muted)">Không tìm thấy chương</div>'; return w; }
     if (Object.keys(App.errors).length) { const eb = U().div('ebanner'); eb.textContent = '⚠ ' + Object.values(App.errors).join(' · '); w.appendChild(eb); }
 
     const ic = U().div('fc'); ic.innerHTML = '<div class="fct">📑 Thông tin chương</div>';
@@ -552,7 +552,7 @@ window.Admin = (() => {
     const addMore = U().div('fc');
     const th2 = U().div(); th2.style.cssText = 'display:flex;align-items:center;justify-content:space-between;cursor:pointer';
     th2.innerHTML = '<div class="fct" style="margin-bottom:0">📂 Thêm trang mới</div>';
-    const ch2 = U().div(); ch2.style.cssText = 'font-size:12px;color:#555;transition:transform .2s'; ch2.textContent = '▼';
+    const ch2 = U().div(); ch2.style.cssText = 'font-size:12px;color:var(--text-muted);transition:transform .2s'; ch2.textContent = '▼';
     th2.appendChild(ch2);
     const body2 = U().div(); body2.style.display = 'none'; body2.style.marginTop = '14px';
     const sc2 = AdminForm.buildSourceCard(); sc2.style.cssText = 'margin:0;background:transparent;padding:0;border:none';
@@ -596,7 +596,7 @@ window.Admin = (() => {
     if (usage) {
       const pct = Math.round(usage.usage / usage.quota * 100), color = pct > 80 ? '#e05555' : pct > 50 ? '#e0a030' : '#4caf50';
       const sb = U().div('storage-bar');
-      sb.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+      sb.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
 <div class="storage-track"><div class="storage-fill" style="width:${pct}%;background:${color}"></div></div>
 <div class="storage-label">${fmtBytes(usage.usage)} / ${fmtBytes(usage.quota)} (${pct}%)</div>`;
       w.appendChild(sb);
@@ -625,10 +625,10 @@ window.Admin = (() => {
     // ── Lưu trữ dữ liệu ──
     const storeCard = U().div('sc'); storeCard.style.marginBottom = '12px';
     storeCard.innerHTML = '<div class="sl" style="margin-bottom:8px">💾 Lưu trữ dữ liệu</div>';
-    const storeInfo = U().div(); storeInfo.style.cssText='font-size:11px;color:#666;line-height:1.8;margin-bottom:10px';
+    const storeInfo = U().div(); storeInfo.style.cssText='font-size:11px;color:var(--text-muted);line-height:1.8;margin-bottom:10px';
     storeInfo.innerHTML = `Toàn bộ dữ liệu (metadata truyện + trang ảnh + nội dung truyện chữ) được lưu trong
-<b style="color:#888">IndexedDB</b> của trình duyệt — không cần server, không upload lên internet.<br>
-<span style="color:#555">⚠ Xóa cache/dữ liệu trình duyệt sẽ mất toàn bộ dữ liệu. Dùng Export để backup định kỳ.</span>`;
+<b style="color:var(--text-muted)">IndexedDB</b> của trình duyệt — không cần server, không upload lên internet.<br>
+<span style="color:var(--text-muted)">⚠ Xóa cache/dữ liệu trình duyệt sẽ mất toàn bộ dữ liệu. Dùng Export để backup định kỳ.</span>`;
     storeCard.appendChild(storeInfo);
 
     // Export / Import buttons
@@ -689,7 +689,7 @@ window.Admin = (() => {
     });
     impWrap.appendChild(impBtn); impWrap.appendChild(impFile);
 
-    const noteImp = U().div(); noteImp.style.cssText='font-size:10px;color:#555;margin-top:6px;line-height:1.6';
+    const noteImp = U().div(); noteImp.style.cssText='font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.6';
     noteImp.innerHTML='<b>Export</b>: lưu metadata + nội dung truyện chữ (không gồm file ảnh/PDF đã upload).<br><b>Import</b>: gộp vào dữ liệu hiện tại, không ghi đè.';
 
     [expBtn, impWrap].forEach(e=>ioRow.appendChild(e));
@@ -729,9 +729,9 @@ window.Admin = (() => {
       const ua = U().div('sc'); ua.style.marginBottom = '14px';
       ua.innerHTML = `<div class="sl" style="margin-bottom:10px">👥 Hoạt động người đọc</div>
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-  <div style="text-align:center"><div style="font-size:20px;font-family:monospace;color:#c8a96e">${users.length}</div><div style="font-size:10px;color:#555;margin-top:3px">Người đọc</div></div>
-  <div style="text-align:center"><div style="font-size:20px;font-family:monospace;color:#c8a96e">${users.reduce((a,u)=>a+u.reads,0)}</div><div style="font-size:10px;color:#555;margin-top:3px">Lượt đọc</div></div>
-  <div style="text-align:center"><div style="font-size:20px;font-family:monospace;color:#c8a96e">${stats.length}</div><div style="font-size:10px;color:#555;margin-top:3px">Truyện được đọc</div></div>
+  <div style="text-align:center"><div style="font-size:20px;font-family:monospace;color:var(--accent)">${users.length}</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Người đọc</div></div>
+  <div style="text-align:center"><div style="font-size:20px;font-family:monospace;color:var(--accent)">${users.reduce((a,u)=>a+u.reads,0)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Lượt đọc</div></div>
+  <div style="text-align:center"><div style="font-size:20px;font-family:monospace;color:var(--accent)">${stats.length}</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Truyện được đọc</div></div>
 </div>`;
       w.appendChild(ua);
 
@@ -740,10 +740,10 @@ window.Admin = (() => {
         const tc = U().div('sc'); tc.style.marginBottom = '14px';
         tc.innerHTML = '<div class="sl" style="margin-bottom:10px">🔥 Truyện được đọc nhiều nhất</div>';
         stats.slice(0, 5).forEach((s, i) => {
-          const row = U().div(); row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #1a1a1e';
-          const rank = U().div(); rank.style.cssText = 'font-family:monospace;font-size:12px;color:#555;min-width:20px'; rank.textContent = `${i+1}.`;
+          const row = U().div(); row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bg-tertiary)';
+          const rank = U().div(); rank.style.cssText = 'font-family:monospace;font-size:12px;color:var(--text-muted);min-width:20px'; rank.textContent = `${i+1}.`;
           const name = U().div(); name.style.cssText = 'flex:1;font-size:12px'; name.textContent = s.comic?.title_vi || s.comic?.titleVI || s.comic?.id || '?';
-          const cnt  = U().div(); cnt.style.cssText = 'font-size:11px;color:#c8a96e;font-family:monospace'; cnt.textContent = s.count + ' lượt';
+          const cnt  = U().div(); cnt.style.cssText = 'font-size:11px;color:var(--accent);font-family:monospace'; cnt.textContent = s.count + ' lượt';
           [rank, name, cnt].forEach(e => row.appendChild(e));
           tc.appendChild(row);
         });
@@ -755,9 +755,9 @@ window.Admin = (() => {
         const ru = U().div('sc'); ru.style.marginBottom = '14px';
         ru.innerHTML = '<div class="sl" style="margin-bottom:10px">🕐 Hoạt động gần đây</div>';
         users.slice(0, 5).forEach(u => {
-          const row = U().div(); row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a1a1e;font-size:11px';
-          const uid = U().div(); uid.style.cssText = 'font-family:monospace;color:#666;font-size:10px'; uid.textContent = u.id.slice(0,8)+'...';
-          const meta = U().div(); meta.style.color='#555';
+          const row = U().div(); row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bg-tertiary);font-size:11px';
+          const uid = U().div(); uid.style.cssText = 'font-family:monospace;color:var(--text-muted);font-size:10px'; uid.textContent = u.id.slice(0,8)+'...';
+          const meta = U().div(); meta.style.color='var(--text-muted)';
           const d = new Date(u.lastActive);
           meta.textContent = `${u.reads} lượt · ${d.toLocaleDateString('vi-VN')}`;
           [uid, meta].forEach(e => row.appendChild(e));
@@ -767,11 +767,11 @@ window.Admin = (() => {
       }
 
       if (!stats.length && !users.length) {
-        w.innerHTML += '<div style="color:#555;font-size:12px;padding:20px 0">Chưa có dữ liệu người đọc.</div>';
+        w.innerHTML += '<div style="color:var(--text-muted);font-size:12px;padding:20px 0">Chưa có dữ liệu người đọc.</div>';
       }
     } catch(e) {
       UI.hideLoading();
-      w.innerHTML += `<div style="color:#e05555;font-size:12px">Lỗi tải thống kê: ${e.message}<br><span style="color:#555;font-size:11px">Cần chạy file data/supabase-user-schema.sql trong Supabase SQL Editor.</span></div>`;
+      w.innerHTML += `<div style="color:#e05555;font-size:12px">Lỗi tải thống kê: ${e.message}<br><span style="color:var(--text-muted);font-size:11px">Cần chạy file data/supabase-user-schema.sql trong Supabase SQL Editor.</span></div>`;
     }
     container.appendChild(w);
   }
@@ -798,7 +798,7 @@ window.Admin = (() => {
       UI.hideLoading();
       w.innerHTML += `<div style="color:#e05555;font-size:12px;padding:16px 0">
         Lỗi: ${e.message}<br>
-        <span style="color:#555;font-size:11px">Cần chạy supabase-schema.sql để tạo bảng profiles.</span>
+        <span style="color:var(--text-muted);font-size:11px">Cần chạy supabase-schema.sql để tạo bảng profiles.</span>
       </div>`;
       container.appendChild(w); return;
     }
@@ -847,13 +847,13 @@ window.Admin = (() => {
     addCard.appendChild(addRow); addCard.appendChild(addMsg); w.appendChild(addCard);
 
     // User table
-    const tableWrap = U().div(); tableWrap.style.cssText='background:#18181c;border:1px solid #2a2a30;border-radius:8px;overflow:hidden';
+    const tableWrap = U().div(); tableWrap.style.cssText='background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;overflow:hidden';
     const tbl = U().el('table'); tbl.style.cssText='width:100%;border-collapse:collapse';
-    tbl.innerHTML=`<thead><tr style="background:#111;border-bottom:1px solid #2a2a30">
-<th style="padding:10px 14px;font-size:10px;font-weight:500;color:#666;text-align:left;letter-spacing:.5px;text-transform:uppercase">Tài khoản</th>
-<th style="padding:10px 14px;font-size:10px;font-weight:500;color:#666;text-align:left;letter-spacing:.5px;text-transform:uppercase">Role</th>
-<th style="padding:10px 14px;font-size:10px;font-weight:500;color:#666;text-align:left;letter-spacing:.5px;text-transform:uppercase">Hoạt động</th>
-<th style="padding:10px 14px;font-size:10px;font-weight:500;color:#666;text-align:center;letter-spacing:.5px;text-transform:uppercase">Thao tác</th>
+    tbl.innerHTML=`<thead><tr style="background:var(--bg-secondary);border-bottom:1px solid var(--border)">
+<th style="padding:10px 14px;font-size:10px;font-weight:500;color:var(--text-muted);text-align:left;letter-spacing:.5px;text-transform:uppercase">Tài khoản</th>
+<th style="padding:10px 14px;font-size:10px;font-weight:500;color:var(--text-muted);text-align:left;letter-spacing:.5px;text-transform:uppercase">Role</th>
+<th style="padding:10px 14px;font-size:10px;font-weight:500;color:var(--text-muted);text-align:left;letter-spacing:.5px;text-transform:uppercase">Hoạt động</th>
+<th style="padding:10px 14px;font-size:10px;font-weight:500;color:var(--text-muted);text-align:center;letter-spacing:.5px;text-transform:uppercase">Thao tác</th>
 </tr></thead>`;
     const tbody = U().el('tbody');
 
@@ -863,15 +863,15 @@ window.Admin = (() => {
       const lastAct= lastH ? fmtRelTime(lastH.updated_at) : (p.last_seen ? fmtRelTime(p.last_seen) : 'Chưa có');
       const isMe   = p.id === Auth.getUserId();
 
-      const tr = U().el('tr'); tr.style.cssText='border-bottom:1px solid #1e1e24;transition:background .1s';
-      tr.addEventListener('mouseenter',()=>tr.style.background='#1f1f24');
+      const tr = U().el('tr'); tr.style.cssText='border-bottom:1px solid var(--bg-tertiary);transition:background .1s';
+      tr.addEventListener('mouseenter',()=>tr.style.background='var(--bg-tertiary)');
       tr.addEventListener('mouseleave',()=>tr.style.background='');
 
       // Avatar + email
       const av = p.avatar_url
         ? `<img src="${U().esc(p.avatar_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px">`
-        : `<span style="display:inline-flex;width:28px;height:28px;border-radius:50%;background:#2a2a30;align-items:center;justify-content:center;font-size:11px;margin-right:8px;vertical-align:middle">${(p.display_name||p.email||'?').charAt(0).toUpperCase()}</span>`;
-      const namePart = p.display_name ? `<div style="font-size:12px;font-weight:500">${U().esc(p.display_name)}</div><div style="font-size:10px;color:#555">${U().esc(p.email)}</div>` : `<div style="font-size:12px">${U().esc(p.email)}</div>`;
+        : `<span style="display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--border);align-items:center;justify-content:center;font-size:11px;margin-right:8px;vertical-align:middle">${(p.display_name||p.email||'?').charAt(0).toUpperCase()}</span>`;
+      const namePart = p.display_name ? `<div style="font-size:12px;font-weight:500">${U().esc(p.display_name)}</div><div style="font-size:10px;color:var(--text-muted)">${U().esc(p.email)}</div>` : `<div style="font-size:12px">${U().esc(p.email)}</div>`;
       const blockedBadge = p.is_blocked ? `<span style="font-size:9px;background:#3a1515;color:#e05555;border:1px solid #5a2020;padding:1px 5px;border-radius:3px;margin-left:4px">Bị khóa</span>` : '';
       const meBadge = isMe ? `<span style="font-size:9px;background:#1a2a1a;color:#4caf50;border:1px solid #2a4a2a;padding:1px 5px;border-radius:3px;margin-left:4px">Bạn</span>` : '';
 
@@ -880,7 +880,7 @@ window.Admin = (() => {
 
       // Role selector
       const td2 = U().el('td'); td2.style.padding='10px 14px';
-      const roleSel = U().el('select'); roleSel.style.cssText='background:#111;border:1px solid #2a2a30;border-radius:4px;padding:4px 7px;color:#e8e6e0;font-size:11px;cursor:pointer;font-family:inherit';
+      const roleSel = U().el('select'); roleSel.style.cssText='background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:4px 7px;color:var(--text-primary);font-size:11px;cursor:pointer;font-family:inherit';
       [['user','User'],['publisher','Publisher'],['admin','Admin']].forEach(([v,l])=>{
         const o=U().el('option');o.value=v;o.textContent=l;if(v===p.role)o.selected=true;roleSel.appendChild(o);
       });
@@ -892,7 +892,7 @@ window.Admin = (() => {
 
       // Activity
       const td3 = U().el('td'); td3.style.padding='10px 14px';
-      td3.innerHTML=`<div style="font-size:11px;color:#c8a96e">${reads} lượt đọc</div><div style="font-size:10px;color:#555;margin-top:2px">Cuối: ${lastAct}</div>`;
+      td3.innerHTML=`<div style="font-size:11px;color:var(--accent)">${reads} lượt đọc</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px">Cuối: ${lastAct}</div>`;
 
       // Actions
       const td4 = U().el('td'); td4.style.cssText='padding:10px 14px;text-align:center';
@@ -938,7 +938,7 @@ window.Admin = (() => {
     });
 
     if(!profiles.length){
-      const tr=U().el('tr'); const td=U().el('td'); td.colSpan=4; td.style.cssText='padding:32px;text-align:center;color:#555;font-size:12px';
+      const tr=U().el('tr'); const td=U().el('td'); td.colSpan=4; td.style.cssText='padding:32px;text-align:center;color:var(--text-muted);font-size:12px';
       td.textContent='Chưa có user nào. Khi user đăng ký, họ sẽ xuất hiện ở đây.';
       tr.appendChild(td); tbody.appendChild(tr);
     }
@@ -946,8 +946,8 @@ window.Admin = (() => {
     tbl.appendChild(tbody); tableWrap.appendChild(tbl); w.appendChild(tableWrap);
 
     // Note về quyền xóa
-    const note = U().div(); note.style.cssText='font-size:10px;color:#444;margin-top:10px;line-height:1.7';
-    note.innerHTML='<b style="color:#555">Lưu ý:</b> Xóa tài khoản sẽ xóa lịch sử đọc và bookmark của user đó. Tài khoản Google OAuth chỉ xóa được profile, không xóa được khỏi Supabase Auth (cần dùng Dashboard).';
+    const note = U().div(); note.style.cssText='font-size:10px;color:var(--text-muted);margin-top:10px;line-height:1.7';
+    note.innerHTML='<b style="color:var(--text-muted)">Lưu ý:</b> Xóa tài khoản sẽ xóa lịch sử đọc và bookmark của user đó. Tài khoản Google OAuth chỉ xóa được profile, không xóa được khỏi Supabase Auth (cần dùng Dashboard).';
     w.appendChild(note);
     container.appendChild(w);
   }

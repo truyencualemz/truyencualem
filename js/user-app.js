@@ -105,20 +105,20 @@ async function loadUserUI(user) {
     if (e.message === 'RLS_NOT_CONFIGURED') {
       c.innerHTML = `<div style="padding:40px;max-width:500px;margin:0 auto">
 <div style="color:#e0a030;font-size:14px;font-weight:500;margin-bottom:12px">⚠ Chưa cấu hình quyền truy cập</div>
-<div style="font-size:12px;color:#888;line-height:1.9">
-  Cần chạy file <code style="background:#1a1a1e;padding:1px 6px;border-radius:3px;color:#9ae">data/supabase-user-schema.sql</code>
+<div style="font-size:12px;color:var(--text-muted);line-height:1.9">
+  Cần chạy file <code style="background:var(--bg-tertiary);padding:1px 6px;border-radius:3px;color:#9ae">data/supabase-user-schema.sql</code>
   trong Supabase SQL Editor để cho phép user đọc truyện.<br><br>
-  <b style="color:#aaa">Cách thực hiện:</b><br>
+  <b style="color:var(--text-secondary)">Cách thực hiện:</b><br>
   1. Vào Supabase Dashboard → Database → SQL Editor<br>
   2. Tạo New query<br>
-  3. Paste toàn bộ nội dung file <code style="background:#1a1a1e;padding:1px 6px;border-radius:3px;color:#9ae">supabase-user-schema.sql</code><br>
+  3. Paste toàn bộ nội dung file <code style="background:var(--bg-tertiary);padding:1px 6px;border-radius:3px;color:#9ae">supabase-user-schema.sql</code><br>
   4. Nhấn Run<br>
   5. Reload trang này
 </div></div>`;
     } else {
       c.innerHTML = `<div style="padding:40px;text-align:center;color:#e05555;font-size:13px">
 Lỗi tải truyện: ${U.esc(e.message)}<br>
-<button onclick="location.reload()" style="margin-top:14px;padding:8px 18px;background:#c8a96e;color:#18181c;border:none;border-radius:6px;cursor:pointer;font-size:12px">Thử lại</button></div>`;
+<button onclick="location.reload()" style="margin-top:14px;padding:8px 18px;background:var(--accent);color:var(--bg-primary);border:none;border-radius:6px;cursor:pointer;font-size:12px">Thử lại</button></div>`;
     }
     // Vẫn render tab khác được (continue, bookmarks, account)
     document.querySelectorAll('.tab-btn').forEach(b => {
@@ -150,10 +150,10 @@ function renderHome(container) {
   const sb = U.div('search-bar');
   const si = U.el('span','search-icon'); si.textContent='🔍';
   const inp = U.el('input'); inp.placeholder='Tìm tên truyện...'; inp.value=searchQ;
-  inp.style.cssText='width:100%;background:#111;border:1px solid #2a2a30;border-radius:6px;padding:9px 12px 9px 34px;color:#e8e6e0;font-size:13px;outline:none;font-family:inherit';
+  inp.style.cssText='width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:9px 12px 9px 34px;color:var(--text-primary);font-size:13px;outline:none;font-family:inherit';
   inp.addEventListener('input', () => { searchQ=inp.value; refreshGrid(container); });
-  inp.addEventListener('focus', () => inp.style.borderColor='#c8a96e');
-  inp.addEventListener('blur',  () => inp.style.borderColor='#2a2a30');
+  inp.addEventListener('focus', () => inp.style.borderColor='var(--accent)');
+  inp.addEventListener('blur',  () => inp.style.borderColor='var(--border)');
   sb.appendChild(si); sb.appendChild(inp); container.appendChild(sb);
 
   // Genre pills
@@ -185,7 +185,7 @@ function buildGrid(container) {
   if (q) list=list.filter(m => m.titleVI?.toLowerCase().includes(q)||m.titleEN?.toLowerCase().includes(q));
   if (activeGenre!=='all') list=list.filter(m=>m.genre===activeGenre);
 
-  const info = U.div(); info.style.cssText='font-size:11px;color:#555;margin-bottom:10px';
+  const info = U.div(); info.style.cssText='font-size:11px;color:var(--text-muted);margin-bottom:10px';
   info.textContent = (q||activeGenre!=='all') ? `${list.length} / ${allComics.length} truyện` : `${allComics.length} truyện`;
   container.appendChild(info);
 
@@ -227,10 +227,10 @@ async function openChapModal(comic) {
 
   // Continue reading shortcut
   if (history) {
-    const cont = U.div(); cont.style.cssText='padding:10px 12px;border-bottom:1px solid #2a2a30;background:#1a2030';
+    const cont = U.div(); cont.style.cssText='padding:10px 12px;border-bottom:1px solid var(--border);background:#1a2030';
     const idx = comic.chapters.findIndex(c=>c.id===history.chap_id);
-    cont.innerHTML = `<div style="font-size:10px;color:#888;margin-bottom:5px">Đang đọc</div>
-<div style="font-size:13px;color:#c8a96e;font-weight:500">Ch.${history.chap_num}: ${U.esc(history.chap_title||'')}</div>`;
+    cont.innerHTML = `<div style="font-size:10px;color:var(--text-muted);margin-bottom:5px">Đang đọc</div>
+<div style="font-size:13px;color:var(--accent);font-weight:500">Ch.${history.chap_num}: ${U.esc(history.chap_title||'')}</div>`;
     const goBtn = U.btn('btn-primary btn-sm','▶ Tiếp tục',()=>{
       modal.style.display='none';
       openReader(comic, idx>=0?idx:0);
@@ -247,7 +247,7 @@ async function openChapModal(comic) {
     item.innerHTML = `<span class="chap-num">Ch.${ch.num}</span>
 <span class="chap-title">${U.esc(ch.title||'Chương '+ch.num)}</span>
 <span class="chap-type">${ch.type==='text'?'Chữ':'Ảnh'}</span>`;
-    if (isLast) item.innerHTML += `<span style="font-size:9px;color:#c8a96e;margin-left:6px">← đang đọc</span>`;
+    if (isLast) item.innerHTML += `<span style="font-size:9px;color:var(--accent);margin-left:6px">← đang đọc</span>`;
     item.addEventListener('click', () => { modal.style.display='none'; openReader(comic, idx); });
     list.appendChild(item);
   });
@@ -355,8 +355,8 @@ function renderAccount(container) {
   const wrap = U.div(); wrap.style.maxWidth = '480px';
 
   // Avatar + info card
-  const infoCard = U.div(); infoCard.style.cssText = 'background:#18181c;border:1px solid #2a2a30;border-radius:10px;padding:20px;margin-bottom:14px;display:flex;align-items:center;gap:16px';
-  const avi = U.div(); avi.style.cssText = 'width:56px;height:56px;border-radius:50%;background:#2a2a30;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden';
+  const infoCard = U.div(); infoCard.style.cssText = 'background:var(--bg-primary);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:14px;display:flex;align-items:center;gap:16px';
+  const avi = U.div(); avi.style.cssText = 'width:56px;height:56px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden';
   if (avatarUrl) {
     avi.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover">`;
   } else {
@@ -364,8 +364,8 @@ function renderAccount(container) {
   }
   const infoRight = U.div(); infoRight.style.minWidth = '0';
   infoRight.innerHTML = `<div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(displayName||'Chưa đặt tên')}</div>
-<div style="font-size:11px;color:#555;margin-top:3px">${U.esc(email)}</div>
-<div style="font-size:10px;color:#444;margin-top:3px">Đăng nhập qua: <b style="color:#666">${provider}</b></div>`;
+<div style="font-size:11px;color:var(--text-muted);margin-top:3px">${U.esc(email)}</div>
+<div style="font-size:10px;color:var(--text-muted);margin-top:3px">Đăng nhập qua: <b style="color:var(--text-muted)">${provider}</b></div>`;
   infoCard.appendChild(avi); infoCard.appendChild(infoRight);
   wrap.appendChild(infoCard);
 
@@ -375,13 +375,13 @@ function renderAccount(container) {
   wrap.appendChild(msgEl);
 
   // Edit profile card
-  const editCard = U.div(); editCard.style.cssText = 'background:#18181c;border:1px solid #2a2a30;border-radius:10px;padding:20px;margin-bottom:14px';
-  editCard.innerHTML = '<div style="font-size:12px;font-weight:500;margin-bottom:14px;color:#c8a96e">Thông tin cá nhân</div>';
+  const editCard = U.div(); editCard.style.cssText = 'background:var(--bg-primary);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:14px';
+  editCard.innerHTML = '<div style="font-size:12px;font-weight:500;margin-bottom:14px;color:var(--accent)">Thông tin cá nhân</div>';
 
-  const nameLbl = U.el('label'); nameLbl.style.cssText='font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px'; nameLbl.textContent='Tên hiển thị';
+  const nameLbl = U.el('label'); nameLbl.style.cssText='font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px'; nameLbl.textContent='Tên hiển thị';
   const nameInp = U.el('input','fi'); nameInp.value=displayName; nameInp.placeholder='Tên của bạn';
-  nameInp.addEventListener('focus',()=>nameInp.style.borderColor='#c8a96e');
-  nameInp.addEventListener('blur', ()=>nameInp.style.borderColor='#2a2a30');
+  nameInp.addEventListener('focus',()=>nameInp.style.borderColor='var(--accent)');
+  nameInp.addEventListener('blur', ()=>nameInp.style.borderColor='var(--border)');
   editCard.appendChild(nameLbl); editCard.appendChild(nameInp);
   editCard.style.paddingBottom='20px';
 
@@ -403,15 +403,15 @@ function renderAccount(container) {
 
   // Change password (email provider only)
   if (provider === 'email') {
-    const passCard = U.div(); passCard.style.cssText='background:#18181c;border:1px solid #2a2a30;border-radius:10px;padding:20px;margin-bottom:14px';
-    passCard.innerHTML='<div style="font-size:12px;font-weight:500;margin-bottom:14px;color:#c8a96e">Đổi mật khẩu</div>';
+    const passCard = U.div(); passCard.style.cssText='background:var(--bg-primary);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:14px';
+    passCard.innerHTML='<div style="font-size:12px;font-weight:500;margin-bottom:14px;color:var(--accent)">Đổi mật khẩu</div>';
     const fields = [['pass-new','Mật khẩu mới','Ít nhất 6 ký tự','password'],['pass-cfm','Xác nhận mật khẩu mới','Nhập lại mật khẩu mới','password']];
     const inputs = {};
     fields.forEach(([id,lbl,ph,type])=>{
-      const l=U.el('label'); l.style.cssText='font-size:10px;color:#666;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px;margin-top:10px'; l.textContent=lbl;
+      const l=U.el('label'); l.style.cssText='font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px;margin-top:10px'; l.textContent=lbl;
       const inp=U.el('input','fi'); inp.id=id; inp.type=type; inp.placeholder=ph;
-      inp.addEventListener('focus',()=>inp.style.borderColor='#c8a96e');
-      inp.addEventListener('blur', ()=>inp.style.borderColor='#2a2a30');
+      inp.addEventListener('focus',()=>inp.style.borderColor='var(--accent)');
+      inp.addEventListener('blur', ()=>inp.style.borderColor='var(--border)');
       inputs[id]=inp; passCard.appendChild(l); passCard.appendChild(inp);
     });
     const changePassBtn=U.btn('btn-primary btn-sm','Đổi mật khẩu',async()=>{
@@ -429,7 +429,7 @@ function renderAccount(container) {
   }
 
   // Danger zone
-  const dangerCard = U.div(); dangerCard.style.cssText='background:#18181c;border:1px solid #3a2020;border-radius:10px;padding:20px';
+  const dangerCard = U.div(); dangerCard.style.cssText='background:var(--bg-primary);border:1px solid #3a2020;border-radius:10px;padding:20px';
   dangerCard.innerHTML='<div style="font-size:12px;font-weight:500;margin-bottom:12px;color:#e05555">Đăng xuất</div>';
   const soBtn=U.btn('btn-danger btn-sm','Đăng xuất khỏi tài khoản',async()=>{
     if(confirm('Đăng xuất?')) await Auth.signOut();
@@ -613,11 +613,11 @@ function setupPageSync(viEl,enEl){
 function buildTextLangBar(){
   const allLangs=rTextData?.languages||[];
   const bar=U.div('tbar-langs');
-  const lbl=U.div();lbl.style.cssText='font-size:10px;color:#555;white-space:nowrap;flex-shrink:0';lbl.textContent='Cột đọc:';
+  const lbl=U.div();lbl.style.cssText='font-size:10px;color:var(--text-muted);white-space:nowrap;flex-shrink:0';lbl.textContent='Cột đọc:';
   bar.appendChild(lbl);
   allLangs.forEach(lang=>{
     const pill=U.el('label','lang-pill');
-    const cb=U.el('input');cb.type='checkbox';cb.value=lang;cb.style.accentColor='#c8a96e';
+    const cb=U.el('input');cb.type='checkbox';cb.value=lang;cb.style.accentColor='var(--accent)';
     cb.checked=rTextSelLangs.includes(lang);
     cb.addEventListener('change',()=>{
       if(cb.checked){if(rTextSelLangs.length>=3){cb.checked=false;return;}if(!rTextSelLangs.includes(lang))rTextSelLangs.push(lang);}
@@ -638,7 +638,7 @@ function buildTextCols(){
   rTextSelLangs.forEach((lang,i)=>{
     const col=U.div('text-col-wrap');if(i===n-1)col.style.borderRight='none';
     const hdr=U.div('text-col-hdr');const meta=Translate.getLangMeta(lang);
-    hdr.innerHTML=`<span style="font-size:15px">${meta.flag}</span><span style="color:#aaa;font-size:11px">${meta.label}</span>`;
+    hdr.innerHTML=`<span style="font-size:15px">${meta.flag}</span><span style="color:var(--text-secondary);font-size:11px">${meta.label}</span>`;
     col.appendChild(hdr);
     const scroll=U.div('text-col');scroll.dataset.lang=lang;
     renderTextSegs(scroll,lang);scrollEls.push(scroll);col.appendChild(scroll);wrap.appendChild(col);
@@ -656,7 +656,7 @@ function renderTextSegs(container,lang){
     const textEl=U.div('tseg-content');
     const content=seg.content?.[lang];
     if(content){textEl.appendChild(annotateTextUser(content,seg.annotations||[],lang,allOther));}
-    else{textEl.style.color='#444';textEl.textContent=`[Chưa có bản ${Translate.getLangLabel(lang)}]`;}
+    else{textEl.style.color='var(--text-muted)';textEl.textContent=`[Chưa có bản ${Translate.getLangLabel(lang)}]`;}
     wrap.appendChild(textEl);container.appendChild(wrap);
   });
 }
