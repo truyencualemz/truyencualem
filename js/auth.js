@@ -202,18 +202,15 @@ window.Auth = (() => {
     const box = document.createElement('div');
     box.style.cssText = 'background:#18181c;border:1px solid #2a2a30;border-radius:12px;padding:28px 32px;width:340px;max-width:100%';
 
-    const isUserPage = window.location.pathname.includes('user');
-    const subtitle   = isUserPage ? 'Đọc truyện' : 'Admin';
+    const isAdminPage = !window.location.pathname.includes('user');
+    const subtitle    = isAdminPage ? 'Admin' : 'Đọc truyện';
 
-    // Render login form by default
-    renderLoginForm(box, subtitle);
-
+    renderLoginForm(box, subtitle, isAdminPage);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
   }
-
   /* ── Form đăng nhập ── */
-  function renderLoginForm(box, subtitle = 'Admin') {
+  function renderLoginForm(box, subtitle = 'Admin', adminMode = false) {
     box.innerHTML = `
 <div style="font-family:monospace;font-size:13px;color:#c8a96e;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">MangaDesk</div>
 <div style="font-size:11px;color:#444;margin-bottom:22px">${subtitle}</div>
@@ -236,37 +233,39 @@ window.Auth = (() => {
 </div>
 
 <button id="auth-login-btn"
-  style="width:100%;background:#c8a96e;color:#18181c;border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:inherit;transition:background .15s">
+  style="width:100%;background:#c8a96e;color:#18181c;border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:inherit">
   Đăng nhập
 </button>
+
+${adminMode ? `
+<div style="margin-top:8px;padding:10px;background:#111;border-radius:6px;font-size:11px;color:#444;text-align:center;line-height:1.6">
+  Trang Admin chỉ dành cho tài khoản được cấp quyền.<br>
+  Liên hệ Admin để được tạo tài khoản.
+</div>
+` : `
 <button id="auth-register-btn"
-  style="width:100%;background:transparent;color:#888;border:1px solid #2a2a30;border-radius:6px;padding:10px;font-size:12px;cursor:pointer;margin-bottom:16px;font-family:inherit;transition:all .15s">
+  style="width:100%;background:transparent;color:#888;border:1px solid #2a2a30;border-radius:6px;padding:10px;font-size:12px;cursor:pointer;margin-bottom:16px;font-family:inherit">
   Tạo tài khoản mới
 </button>
-
 <div style="position:relative;text-align:center;margin-bottom:14px">
   <span style="font-size:10px;color:#333;background:#18181c;padding:0 8px;position:relative;z-index:1">hoặc</span>
   <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:#2a2a30"></div>
 </div>
 <button id="auth-google-btn"
-  style="width:100%;background:#111;color:#ccc;border:1px solid #2a2a30;border-radius:6px;padding:10px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:border-color .15s">
+  style="width:100%;background:#111;color:#ccc;border:1px solid #2a2a30;border-radius:6px;padding:10px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
   <svg width="15" height="15" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.6 2.2 30.1 0 24 0 14.6 0 6.6 5.5 2.6 13.5l7.8 6C12.3 13.1 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17z"/><path fill="#FBBC05" d="M10.4 28.5c-.5-1.5-.8-3-.8-4.5s.3-3 .8-4.5l-7.8-6C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.5l7.8-6z"/><path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.4l-7.5-5.8c-2 1.4-4.6 2.2-7.4 2.2-6.3 0-11.7-3.6-13.6-9l-7.8 6C6.6 42.5 14.6 48 24 48z"/></svg>
   Đăng nhập với Google
-</button>`;
+</button>
+`}`;
 
     const showMsg = (msg, isErr = true) => {
       const el = box.querySelector('#auth-msg');
-      el.textContent = msg;
-      el.style.display = 'block';
+      el.textContent = msg; el.style.display = 'block';
       el.style.background = isErr ? '#2a1515' : '#1a2e1a';
       el.style.border     = isErr ? '1px solid #5a2020' : '1px solid #2a3f2a';
       el.style.color      = isErr ? '#e05555' : '#4caf50';
     };
-
-    const setLoading = (btn, loading, defaultText) => {
-      btn.disabled = loading;
-      btn.textContent = loading ? 'Đang xử lý...' : defaultText;
-    };
+    const setLoad = (btn, on, txt) => { btn.disabled = on; btn.textContent = on ? 'Đang xử lý...' : txt; };
 
     // Đăng nhập
     box.querySelector('#auth-login-btn').addEventListener('click', async () => {
@@ -274,62 +273,46 @@ window.Auth = (() => {
       const pass  = box.querySelector('#auth-pass').value;
       if (!email || !pass) { showMsg('Nhập email và mật khẩu'); return; }
       const btn = box.querySelector('#auth-login-btn');
-      setLoading(btn, true, 'Đăng nhập');
+      setLoad(btn, true, 'Đăng nhập');
       try {
         await signInEmail(email, pass);
       } catch(e) {
         let msg = e.message;
-        if (msg.includes('Invalid login')) msg = 'Email hoặc mật khẩu không đúng';
-        if (msg.includes('Email not confirmed')) msg = 'Email chưa được xác nhận. Kiểm tra hộp thư hoặc liên hệ admin để được kích hoạt.';
-        showMsg(msg);
-        setLoading(btn, false, 'Đăng nhập');
-      }
-    });
-
-    // Đăng ký
-    box.querySelector('#auth-register-btn').addEventListener('click', async () => {
-      const email = box.querySelector('#auth-email').value.trim();
-      const pass  = box.querySelector('#auth-pass').value;
-      if (!email || !pass) { showMsg('Nhập email và mật khẩu'); return; }
-      if (pass.length < 6) { showMsg('Mật khẩu ít nhất 6 ký tự'); return; }
-      const btn = box.querySelector('#auth-register-btn');
-      setLoading(btn, true, 'Tạo tài khoản mới');
-      try {
-        const data = await signUpEmail(email, pass);
-        // Nếu Supabase không yêu cầu xác nhận email → đăng nhập luôn
-        if (data?.session) {
-          showMsg('✓ Đăng ký thành công!', false);
-        } else {
-          showMsg('✓ Đã gửi email xác nhận. Kiểm tra hộp thư (kể cả spam) rồi click link để kích hoạt tài khoản.', false);
-        }
-        setLoading(btn, false, 'Tạo tài khoản mới');
-      } catch(e) {
-        showMsg(e.message);
-        setLoading(btn, false, 'Tạo tài khoản mới');
+        if (msg.includes('Invalid login'))        msg = 'Email hoặc mật khẩu không đúng';
+        if (msg.includes('Email not confirmed'))  msg = 'Email chưa được xác nhận. Liên hệ admin.';
+        showMsg(msg); setLoad(btn, false, 'Đăng nhập');
       }
     });
 
     // Quên mật khẩu
-    box.querySelector('#auth-forgot-btn').addEventListener('click', () => {
-      renderForgotForm(box, subtitle);
-    });
+    box.querySelector('#auth-forgot-btn').addEventListener('click', () => renderForgotForm(box, subtitle));
 
-    // Google
-    box.querySelector('#auth-google-btn').addEventListener('click', async () => {
-      try {
-        box.querySelector('#auth-google-btn').textContent = 'Đang chuyển hướng...';
-        await signInGoogle();
-      } catch(e) {
-        showMsg(e.message);
-        box.querySelector('#auth-google-btn').innerHTML = `<svg width="15" height="15" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.6 2.2 30.1 0 24 0 14.6 0 6.6 5.5 2.6 13.5l7.8 6C12.3 13.1 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17z"/><path fill="#FBBC05" d="M10.4 28.5c-.5-1.5-.8-3-.8-4.5l-7.8-6C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.5l7.8-6z"/><path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.4l-7.5-5.8c-2 1.4-4.6 2.2-7.4 2.2-6.3 0-11.7-3.6-13.6-9l-7.8 6C6.6 42.5 14.6 48 24 48z"/></svg> Đăng nhập với Google`;
-      }
-    });
+    // Đăng ký + Google — chỉ có trên trang user
+    if (!adminMode) {
+      box.querySelector('#auth-register-btn').addEventListener('click', async () => {
+        const email = box.querySelector('#auth-email').value.trim();
+        const pass  = box.querySelector('#auth-pass').value;
+        if (!email || !pass) { showMsg('Nhập email và mật khẩu'); return; }
+        if (pass.length < 6) { showMsg('Mật khẩu ít nhất 6 ký tự'); return; }
+        const btn = box.querySelector('#auth-register-btn');
+        setLoad(btn, true, 'Tạo tài khoản mới');
+        try {
+          const data = await signUpEmail(email, pass);
+          if (data?.session) showMsg('✓ Đăng ký thành công!', false);
+          else showMsg('✓ Kiểm tra hộp thư và click link xác nhận.', false);
+          setLoad(btn, false, 'Tạo tài khoản mới');
+        } catch(e) { showMsg(e.message); setLoad(btn, false, 'Tạo tài khoản mới'); }
+      });
 
-    // Enter key
+      box.querySelector('#auth-google-btn').addEventListener('click', async () => {
+        try { box.querySelector('#auth-google-btn').textContent = 'Đang chuyển hướng...'; await signInGoogle(); }
+        catch(e) { showMsg(e.message); box.querySelector('#auth-google-btn').textContent = 'Đăng nhập với Google'; }
+      });
+    }
+
     [box.querySelector('#auth-email'), box.querySelector('#auth-pass')].forEach(inp => {
-      inp.addEventListener('keydown', e => { if (e.key === 'Enter') box.querySelector('#auth-login-btn').click(); });
+      inp?.addEventListener('keydown', e => { if (e.key === 'Enter') box.querySelector('#auth-login-btn').click(); });
     });
-
     box.querySelector('#auth-email')?.focus();
   }
 
