@@ -23,9 +23,9 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
-      # Dùng printf thay vì heredoc để tránh lỗi khi secret có ký tự đặc biệt (/, &, ')
+      # Dùng printf để tránh lỗi khi secret có ký tự đặc biệt (/, &, ')
       - name: Create config.js from secrets
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -36,7 +36,7 @@ jobs:
           echo "✓ config.js created ($(wc -c < js/config.js) bytes)"
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -45,4 +45,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v4.0.5
