@@ -156,11 +156,14 @@ window.Reader = (() => {
   ──────────────────────────────────────────────────────────── */
   function loadTwoColumns(viScroll, enScroll, chap) {
     const pages = chap.pages || [];
-    let totalImgs = 0, loadedImgs = 0;
-    const onImgLoad = () => {
-      loadedImgs++;
-      if (loadedImgs >= totalImgs) setupPageSync(viScroll, enScroll);
-    };
+    let syncSetup = false;
+    let pendingImgs = 0;
+
+    function trySync() {
+      if (syncSetup) return;
+      syncSetup = true;
+      setupPageSync(viScroll, enScroll);
+    }
 
     pages.forEach((p, i) => {
       ['vi', 'en'].forEach(lang => {
@@ -174,25 +177,25 @@ window.Reader = (() => {
           wrap.appendChild(ph);
         } else {
           const spin = UI.div('pdf-spin'); spin.textContent = ' '; wrap.appendChild(spin);
-          totalImgs++;
+          pendingImgs++;
           PDFModule.buildPageEl(d, chap.id, p.id, lang, null).then(pageEl => {
             if (wrap.contains(spin)) wrap.removeChild(spin);
             if (pageEl) {
               pageEl.style.width = App.rZoom + '%';
               pageEl.style.maxWidth = 'none';
-              const imgs = pageEl.querySelectorAll ? pageEl.querySelectorAll('img') : [];
-              if (imgs.length > 0) {
-                imgs.forEach(img => {
-                  if (img.complete) onImgLoad();
-                  else img.addEventListener('load', onImgLoad, { once: true });
-                });
-              } else {
-                onImgLoad(); // canvas/PDF
-              }
               wrap.appendChild(pageEl);
+              const imgs = pageEl.querySelectorAll ? pageEl.querySelectorAll('img') : [];
+              let imgsDone = imgs.length === 0 ? 1 : 0;
+              const checkDone = () => { pendingImgs--; if (pendingImgs <= 0) trySync(); };
+              imgs.forEach(img => {
+                if (img.complete && img.naturalHeight > 0) imgsDone++;
+                else img.addEventListener('load', checkDone, { once: true });
+              });
+              if (imgsDone === imgs.length) checkDone();
             } else {
               const ph = UI.div('spno'); ph.textContent = '[lỗi]'; wrap.appendChild(ph);
-              onImgLoad();
+              pendingImgs--;
+              if (pendingImgs <= 0) trySync();
             }
           });
         }
@@ -200,8 +203,7 @@ window.Reader = (() => {
       });
     });
 
-    // Fallback sync after 1.5s
-    setTimeout(() => setupPageSync(viScroll, enScroll), 1500);
+    setTimeout(() => trySync(), 2000);
   }
 
   /* ── Page-based scroll sync ─────────────────────────────────
