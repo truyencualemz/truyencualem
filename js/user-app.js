@@ -568,8 +568,16 @@ function applyZoom(zoom) {
 }
 
 async function loadSingleImages(container, chap, lang) {
-  for(let i=0;i<chap.pages.length;i++){
-    const p=chap.pages[i];
+  const pages = chap.pages || [];
+  if (!pages.length) {
+    const ph = U.div('rnoph');
+    ph.style.cssText = 'padding:40px;text-align:center;font-size:13px;color:var(--text-muted)';
+    ph.textContent = 'Chương này chưa có trang nào hoặc chỉ dành cho bản đọc từ Drive. Kiểm tra lại cấu hình Apps Script URL trong phần cài đặt.';
+    container.appendChild(ph);
+    return;
+  }
+  for(let i=0;i<pages.length;i++){
+    const p=pages[i];
     const lbl=U.div('rpl'); lbl.textContent=`Trang ${i+1}${p.note?' · '+p.note:''}`; container.appendChild(lbl);
     const d=p[lang]; if(!d){const ph=U.div('rnoph');ph.textContent=`[bản ${lang.toUpperCase()} chưa có]`;container.appendChild(ph);continue;}
     const ws=rZoom!==100?rZoom+'%':null;

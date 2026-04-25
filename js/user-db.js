@@ -25,7 +25,7 @@ window.UserDB = (() => {
     if (!uid()) return [];
     const { data } = await sb()
       .from('reading_history')
-      .select('*, comics(id,title_vi,title_en,cover,status), chapters(id,num,title,type)')
+      .select('*, comics(id,title_vi,title_en,cover,status), chapters(id,num,title,type,pages)')
       .eq('user_id', uid())
       .order('updated_at', { ascending: false })
       .limit(20);
@@ -87,7 +87,7 @@ window.UserDB = (() => {
     if (!uid()) return [];
     const { data } = await sb()
       .from('bookmarks')
-      .select('*, comics(id,title_vi,title_en,cover), chapters(id,num,title,type)')
+      .select('*, comics(id,title_vi,title_en,cover), chapters(id,num,title,type,pages)')
       .eq('user_id', uid())
       .order('created_at', { ascending: false });
     return data || [];
@@ -121,7 +121,7 @@ window.UserDB = (() => {
     const ids = list.map(c => c.id);
     const { data: chapters, error: chapErr } = await sb()
       .from('chapters')
-      .select('id,comic_id,num,title,type,languages')
+      .select('id,comic_id,num,title,type,languages,pages')
       .in('comic_id', ids)
       .order('num');
 
@@ -132,7 +132,11 @@ window.UserDB = (() => {
       cover: c.cover, genre: c.genre, status: c.status,
       chapters: (chapters || [])
         .filter(ch => ch.comic_id === c.id)
-        .map(ch => ({ id: ch.id, num: ch.num, title: ch.title, type: ch.type, languages: ch.languages || [] })),
+        .map(ch => ({
+          id: ch.id, num: ch.num, title: ch.title,
+          type: ch.type, languages: ch.languages || [],
+          pages: ch.pages || [],
+        })),
     }));
   }
 
