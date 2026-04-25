@@ -589,35 +589,96 @@ async function loadSingleImages(container, chap, lang) {
 }
 
 function loadSplitImages(viScroll, enScroll, chap) {
-  chap.pages.forEach((p,i)=>{
-    ['vi','en'].forEach(lang=>{
-      const scrollEl=lang==='vi'?viScroll:enScroll;
-      const wrap=U.div('split-page');
-      const lbl=U.div('spl'); lbl.textContent=`P${i+1}`; wrap.appendChild(lbl);
-      const d=p[lang];
-      if(!d){const ph=U.div('spblank');ph.textContent=`[${lang.toUpperCase()} trống]`;wrap.appendChild(ph);}
-      else{
-        const spin=U.div('pdf-spin'); spin.textContent=' '; wrap.appendChild(spin);
-        PDFModule.buildPageEl(d,chap.id,p.id,lang,null).then(el=>{
-          if(wrap.contains(spin))wrap.removeChild(spin);
-          if(el){el.style.width=rZoom+'%';el.style.maxWidth='none';wrap.appendChild(el);}
-          else{const ph=U.div('spno');ph.textContent='[lỗi]';wrap.appendChild(ph);}
+  const pages = chap.pages || [];
+  if (!pages.length) return;
+
+  // Track total images to know when all loaded
+  let totalImgs = 0, loadedImgs = 0;
+  const onImgLoad = () => { loadedImgs++; if (loadedImgs >= totalImgs) setupPageSync(viScroll, enScroll); };
+
+  pages.forEach((p, i) => {
+    ['vi', 'en'].forEach(lang => {
+      const scrollEl = lang === 'vi' ? viScroll : enScroll;
+      const wrap = U.div('split-page');
+      const lbl = U.div('spl'); lbl.textContent = `P${i+1}`; wrap.appendChild(lbl);
+      const d = p[lang];
+      if (!d) {
+        const ph = U.div('spblank'); ph.textContent = `[${lang.toUpperCase()} trống]`; wrap.appendChild(ph);
+      } else {
+        const spin = U.div('pdf-spin'); spin.textContent = ' '; wrap.appendChild(spin);
+        totalImgs++;
+        PDFModule.buildPageEl(d, chap.id, p.id, lang, null).then(el => {
+          if (wrap.contains(spin)) wrap.removeChild(spin);
+          if (el) {
+            el.style.width = '100%'; el.style.maxWidth = 'none';
+            // Re-sync when this image finishes loading
+            const imgs = el.querySelectorAll ? el.querySelectorAll('img') : [];
+            if (imgs.length > 0) {
+              imgs.forEach(img => {
+                if (img.complete) onImgLoad();
+                else img.addEventListener('load', onImgLoad, { once: true });
+              });
+            } else {
+              // Canvas (PDF) - count as loaded
+              onImgLoad();
+            }
+            wrap.appendChild(el);
+          } else {
+            const ph = U.div('spno'); ph.textContent = '[lỗi]'; wrap.appendChild(ph);
+            onImgLoad(); // count even on error
+          }
         });
       }
       scrollEl.appendChild(wrap);
     });
   });
-  setTimeout(()=>setupPageSync(viScroll,enScroll),150);
+
+  // Fallback: sync after 1s even if images not fully loaded
+  setTimeout(() => setupPageSync(viScroll, enScroll), 1000);
 }
 
-function setupPageSync(viEl,enEl){
-  let syncing=false;
-  const segs=el=>Array.from(el.querySelectorAll('.split-page'));
-  function curIdx(el){const ps=segs(el),top=el.scrollTop;let idx=0;for(let i=0;i<ps.length;i++){if(ps[i].offsetTop<=top+4)idx=i;else break;}return idx;}
-  function ratio(el,idx){const ps=segs(el);if(!ps[idx])return 0;return Math.max(0,Math.min(1,(el.scrollTop-ps[idx].offsetTop)/(ps[idx].offsetHeight||1)));}
-  function syncTo(src,dst){if(syncing)return;syncing=true;const idx=curIdx(src),r=ratio(src,idx);const ps=segs(dst);if(ps[idx])dst.scrollTop=ps[idx].offsetTop+r*(ps[idx].offsetHeight||0);requestAnimationFrame(()=>{syncing=false;});}
-  viEl.addEventListener('scroll',()=>syncTo(viEl,enEl),{passive:true});
-  enEl.addEventListener('scroll',()=>syncTo(enEl,viEl),{passive:true});
+function setupPageSync(viEl, enEl) {
+  // Remove old listeners by replacing with clones
+  const viNew = viEl.cloneNode(true);
+  const enNew = enEl.cloneNode(true);
+  viEl.parentNode?.replaceChild(viNew, viEl);
+  enEl.parentNode?.replaceChild(enNew, enEl);
+  viEl = viNew; enEl = enNew;
+
+  let syncing = false;
+  const segs = el => Array.from(el.querySelectorAll('.split-page'));
+
+  function curIdx(el) {
+    const ps = segs(el), top = el.scrollTop; let idx = 0;
+    for (let i = 0; i < ps.length; i++) { if (ps[i].offsetTop <= top + 4) idx = i; else break; }
+    return idx;
+  }
+  function ratio(el, idx) {
+    const ps = segs(el); if (!ps[idx]) return 0;
+    const h = ps[idx].offsetHeight || 1;
+    return Math.max(0, Math.min(1, (el.scrollTop - ps[idx].offsetTop) / h));
+  }
+  function syncTo(src, dst) {
+    if (syncing) return; syncing = true;
+    const idx = curIdx(src), r = ratio(src, idx);
+    const ps = segs(dst);
+    if (ps[idx]) dst.scrollTop = ps[idx].offsetTop + r * (ps[idx].offsetHeight || 0);
+    requestAnimationFrame(() => { syncing = false; });
+  }
+
+  viEl.addEventListener('scroll', () => syncTo(viEl, enEl), { passive: true });
+  enEl.addEventListener('scroll', () => syncTo(enEl, viEl), { passive: true });
+
+  // Use ResizeObserver to re-sync when content height changes (image loads)
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => {
+      if (!syncing) syncTo(viEl, enEl);
+    });
+    ro.observe(viEl);
+    ro.observe(enEl);
+    // Stop observing after 10s (all images should be loaded by then)
+    setTimeout(() => ro.disconnect(), 10000);
+  }
 }
 
 /* ── Text chapter reader ── */

@@ -103,7 +103,7 @@ window.Reader = (() => {
         const col = UI.div('rcol');
         const hdr = UI.div('rchdr');
         hdr.innerHTML = `<span class="lt l${lang}">${lang.toUpperCase()}</span>
-<span style="font-size:10px;color:#555;margin-left:4px">${lang === 'vi' ? 'Tiếng Việt' : 'English'}</span>`;
+<span style="font-size:10px;color:var(--text-muted);margin-left:4px">${lang === 'vi' ? 'Tiếng Việt' : 'English'}</span>`;
         const scroll = UI.div('rcs');
         // VI: ảnh căn phải (áp sát đường giữa khi zoom out)
         // EN: ảnh căn trái (áp sát đường giữa)
@@ -155,7 +155,14 @@ window.Reader = (() => {
      Sau khi render xong, setupPageSync kết nối 2 cột.
   ──────────────────────────────────────────────────────────── */
   function loadTwoColumns(viScroll, enScroll, chap) {
-    chap.pages.forEach((p, i) => {
+    const pages = chap.pages || [];
+    let totalImgs = 0, loadedImgs = 0;
+    const onImgLoad = () => {
+      loadedImgs++;
+      if (loadedImgs >= totalImgs) setupPageSync(viScroll, enScroll);
+    };
+
+    pages.forEach((p, i) => {
       ['vi', 'en'].forEach(lang => {
         const scrollEl = lang === 'vi' ? viScroll : enScroll;
         const wrap = UI.div('split-page');
@@ -167,14 +174,25 @@ window.Reader = (() => {
           wrap.appendChild(ph);
         } else {
           const spin = UI.div('pdf-spin'); spin.textContent = ' '; wrap.appendChild(spin);
+          totalImgs++;
           PDFModule.buildPageEl(d, chap.id, p.id, lang, null).then(pageEl => {
             if (wrap.contains(spin)) wrap.removeChild(spin);
             if (pageEl) {
               pageEl.style.width = App.rZoom + '%';
               pageEl.style.maxWidth = 'none';
+              const imgs = pageEl.querySelectorAll ? pageEl.querySelectorAll('img') : [];
+              if (imgs.length > 0) {
+                imgs.forEach(img => {
+                  if (img.complete) onImgLoad();
+                  else img.addEventListener('load', onImgLoad, { once: true });
+                });
+              } else {
+                onImgLoad(); // canvas/PDF
+              }
               wrap.appendChild(pageEl);
             } else {
               const ph = UI.div('spno'); ph.textContent = '[lỗi]'; wrap.appendChild(ph);
+              onImgLoad();
             }
           });
         }
@@ -182,7 +200,8 @@ window.Reader = (() => {
       });
     });
 
-    setTimeout(() => setupPageSync(viScroll, enScroll), 150);
+    // Fallback sync after 1.5s
+    setTimeout(() => setupPageSync(viScroll, enScroll), 1500);
   }
 
   /* ── Page-based scroll sync ─────────────────────────────────
@@ -232,6 +251,13 @@ window.Reader = (() => {
 
     viEl.addEventListener('scroll', () => syncTo(viEl, enEl), { passive: true });
     enEl.addEventListener('scroll', () => syncTo(enEl, viEl), { passive: true });
+
+    // Re-sync khi ảnh load làm thay đổi chiều cao cột
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => { if (!syncing) syncTo(viEl, enEl); });
+      ro.observe(viEl); ro.observe(enEl);
+      setTimeout(() => ro.disconnect(), 15000);
+    }
   }
 
   return { open, close };
