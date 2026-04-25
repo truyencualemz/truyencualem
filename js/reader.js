@@ -97,21 +97,11 @@ window.Reader = (() => {
       const scroll = UI.div('rscroll'); body.appendChild(scroll);
       loadSingle(scroll, chap, App.rLang);
     } else {
-      const sp = UI.div('rsplit'); body.appendChild(sp);
-      const scrollEls = {};
-      ['vi', 'en'].forEach(lang => {
-        const col = UI.div('rcol');
-        const hdr = UI.div('rchdr');
-        hdr.innerHTML = `<span class="lt l${lang}">${lang.toUpperCase()}</span>
-<span style="font-size:10px;color:var(--text-muted);margin-left:4px">${lang === 'vi' ? 'Tiếng Việt' : 'English'}</span>`;
-        const scroll = UI.div('rcs');
-        // VI: ảnh căn phải (áp sát đường giữa khi zoom out)
-        // EN: ảnh căn trái (áp sát đường giữa)
-        scroll.style.cssText = `align-items:${lang === 'vi' ? 'flex-end' : 'flex-start'}`;
-        scrollEls[lang] = scroll;
-        col.appendChild(hdr); col.appendChild(scroll); sp.appendChild(col);
-      });
-      loadTwoColumns(scrollEls.vi, scrollEls.en, chap);
+      // Grid layout: 1 scroll, mỗi row = 1 cặp VI + EN
+      const grid = UI.div();
+      grid.style.cssText = 'flex:1;overflow-y:auto;padding:8px;background:var(--reader-bg)';
+      body.appendChild(grid);
+      renderSplitGrid(grid, chap);
     }
     rd.appendChild(body);
   }
@@ -260,6 +250,45 @@ window.Reader = (() => {
       ro.observe(viEl); ro.observe(enEl);
       setTimeout(() => ro.disconnect(), 15000);
     }
+  }
+
+  /* ── Split grid: 1 scroll container, mỗi row = cặp VI+EN ── */
+  function renderSplitGrid(container, chap) {
+    const pages = chap.pages || [];
+
+    // Header
+    const hdr = UI.div();
+    hdr.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;position:sticky;top:0;z-index:10;background:var(--reader-bg);padding-bottom:4px';
+    [['vi','🇻🇳 VI'],['en','🇬🇧 EN']].forEach(([lang,lbl]) => {
+      const c = UI.div(); c.className = `lt l${lang}`;
+      c.style.cssText = 'text-align:center;padding:3px 0;font-size:11px;border-radius:4px';
+      c.textContent = lbl; hdr.appendChild(c);
+    });
+    container.appendChild(hdr);
+
+    pages.forEach((p, i) => {
+      const row = UI.div();
+      row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;align-items:start';
+
+      ['vi', 'en'].forEach(lang => {
+        const cell = UI.div();
+        cell.style.cssText = 'display:flex;flex-direction:column;align-items:center';
+        const lbl = UI.div('spl'); lbl.textContent = `P${i+1}`; cell.appendChild(lbl);
+        const d = p[lang];
+        if (!d) {
+          const ph = UI.div('spblank'); ph.textContent = `[${lang.toUpperCase()} trống]`; cell.appendChild(ph);
+        } else {
+          const spin = UI.div('pdf-spin'); spin.textContent = ' '; cell.appendChild(spin);
+          PDFModule.buildPageEl(d, chap.id, p.id, lang, null).then(el => {
+            if (cell.contains(spin)) cell.removeChild(spin);
+            if (el) { el.style.cssText = 'width:100%;height:auto;display:block'; cell.appendChild(el); }
+            else { const ph = UI.div('spno'); ph.textContent = '[lỗi]'; cell.appendChild(ph); }
+          });
+        }
+        row.appendChild(cell);
+      });
+      container.appendChild(row);
+    });
   }
 
   return { open, close };

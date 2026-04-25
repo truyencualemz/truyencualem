@@ -538,7 +538,7 @@ async function renderReader() {
   rd.appendChild(nav);
 
   /* Body */
-  const body=U.div(); body.style.cssText='display:flex;flex:1;overflow:hidden;flex-direction:column';
+  const body = U.div(); body.style.cssText='display:flex;flex:1;overflow:hidden;flex-direction:column';
   if (isText) {
     body.appendChild(buildTextLangBar());
     body.appendChild(buildTextCols());
@@ -546,15 +546,9 @@ async function renderReader() {
     const scroll=U.div('rscroll'); body.appendChild(scroll);
     loadSingleImages(scroll, chap, rLang);
   } else {
-    const sp=U.div('rsplit'); body.appendChild(sp);
-    const scrollEls={};
-    ['vi','en'].forEach((lang,i)=>{
-      const col=U.div('rcol'); const hdr=U.div('rchdr');
-      hdr.innerHTML=`<span class="lt l${lang}">${lang.toUpperCase()}</span>`;
-      const scroll=U.div('rcs'); scroll.style.alignItems=lang==='vi'?'flex-end':'flex-start';
-      scrollEls[lang]=scroll; col.appendChild(hdr); col.appendChild(scroll); sp.appendChild(col);
-    });
-    loadSplitImages(scrollEls.vi, scrollEls.en, chap);
+    // Split mode: dùng grid layout, 1 scroll container, không cần sync
+    const grid = U.div(); body.appendChild(grid);
+    renderSplitGrid(grid, chap);
   }
   rd.appendChild(body);
 }
@@ -589,105 +583,71 @@ async function loadSingleImages(container, chap, lang) {
 }
 
 function loadSplitImages(viScroll, enScroll, chap) {
+  // Không dùng 2 cột độc lập nữa.
+  // renderSplitGrid() xử lý toàn bộ — viScroll/enScroll không dùng ở đây.
+}
+
+/* ── Split view dạng bảng: mỗi row = 1 cặp VI + EN ── */
+function renderSplitGrid(container, chap) {
   const pages = chap.pages || [];
-  if (!pages.length) return;
+  container.innerHTML = '';
+  container.style.cssText = 'flex:1;overflow-y:auto;padding:8px;background:var(--reader-bg)';
 
-  let syncSetup = false;
-  let pendingImgs = 0;
-
-  function trySync() {
-    if (syncSetup) return;
-    syncSetup = true;
-    setupPageSync(viScroll, enScroll);
+  if (!pages.length) {
+    const ph = U.div('rnoph');
+    ph.textContent = 'Chương này chưa có trang nào.';
+    container.appendChild(ph);
+    return;
   }
 
+  // Header row
+  const hdr = U.div();
+  hdr.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;position:sticky;top:0;z-index:10;background:var(--reader-bg);padding-bottom:4px';
+  ['VI 🇻🇳','EN 🇬🇧'].forEach(lbl => {
+    const c = U.div();
+    c.style.cssText = 'text-align:center;font-size:10px;font-family:monospace;color:var(--text-muted);padding:3px 0';
+    c.textContent = lbl;
+    hdr.appendChild(c);
+  });
+  container.appendChild(hdr);
+
   pages.forEach((p, i) => {
+    // Row: 2 ô cạnh nhau, tự stretch theo ảnh to hơn
+    const row = U.div();
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;align-items:start';
+    row.dataset.page = i + 1;
+
     ['vi', 'en'].forEach(lang => {
-      const scrollEl = lang === 'vi' ? viScroll : enScroll;
-      const wrap = U.div('split-page');
-      const lbl  = U.div('spl'); lbl.textContent = `P${i+1}`; wrap.appendChild(lbl);
+      const cell = U.div();
+      cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;min-height:40px';
+
+      const lbl = U.div('spl');
+      lbl.textContent = `P${i+1}`;
+      cell.appendChild(lbl);
+
       const d = p[lang];
       if (!d) {
-        const ph = U.div('spblank'); ph.textContent = `[${lang.toUpperCase()} trống]`; wrap.appendChild(ph);
+        const ph = U.div('spblank');
+        ph.textContent = `[${lang.toUpperCase()} trống]`;
+        cell.appendChild(ph);
       } else {
-        const spin = U.div('pdf-spin'); spin.textContent = ' '; wrap.appendChild(spin);
-        pendingImgs++;
+        const spin = U.div('pdf-spin'); spin.textContent = ' '; cell.appendChild(spin);
         PDFModule.buildPageEl(d, chap.id, p.id, lang, null).then(el => {
-          if (wrap.contains(spin)) wrap.removeChild(spin);
+          if (cell.contains(spin)) cell.removeChild(spin);
           if (el) {
-            el.style.width = '100%';
-            el.style.maxWidth = 'none';
-            wrap.appendChild(el);
-            // Chờ ảnh thực sự có kích thước
-            const imgs = el.querySelectorAll ? el.querySelectorAll('img') : [];
-            let imgsDone = imgs.length === 0 ? 1 : 0;
-            const checkDone = () => {
-              pendingImgs--;
-              if (pendingImgs <= 0) trySync();
-            };
-            imgs.forEach(img => {
-              if (img.complete && img.naturalHeight > 0) imgsDone++;
-              else img.addEventListener('load', checkDone, { once: true });
-            });
-            if (imgsDone === imgs.length) checkDone();
+            el.style.cssText = 'width:100%;height:auto;display:block';
+            cell.appendChild(el);
           } else {
-            pendingImgs--;
-            if (pendingImgs <= 0) trySync();
+            const ph = U.div('spno'); ph.textContent = '[lỗi]'; cell.appendChild(ph);
           }
         });
       }
-      scrollEl.appendChild(wrap);
+
+      row.appendChild(cell);
     });
+
+    container.appendChild(row);
   });
-
-  // Fallback: sync sau 2s dù ảnh chưa xong
-  setTimeout(() => trySync(), 2000);
-}
-
-function setupPageSync(viEl, enEl) {
-  // Không clone DOM — chỉ add listeners 1 lần
-  let syncing = false;
-  const segs = el => Array.from(el.querySelectorAll('.split-page'));
-
-  function curIdx(el) {
-    const ps = segs(el), top = el.scrollTop;
-    let idx = 0;
-    for (let i = 0; i < ps.length; i++) {
-      if (ps[i].offsetTop <= top + 4) idx = i;
-      else break;
-    }
-    return idx;
-  }
-
-  function ratio(el, idx) {
-    const ps = segs(el);
-    if (!ps[idx]) return 0;
-    const h = ps[idx].offsetHeight || 1;
-    return Math.max(0, Math.min(1, (el.scrollTop - ps[idx].offsetTop) / h));
-  }
-
-  function syncTo(src, dst) {
-    if (syncing) return;
-    syncing = true;
-    const idx = curIdx(src);
-    const r   = ratio(src, idx);
-    const ps  = segs(dst);
-    if (ps[idx]) dst.scrollTop = ps[idx].offsetTop + r * (ps[idx].offsetHeight || 0);
-    requestAnimationFrame(() => { syncing = false; });
-  }
-
-  viEl.addEventListener('scroll', () => syncTo(viEl, enEl), { passive: true });
-  enEl.addEventListener('scroll', () => syncTo(enEl, viEl), { passive: true });
-
-  // ResizeObserver: re-sync khi ảnh load muộn làm thay đổi chiều cao
-  if (window.ResizeObserver) {
-    const ro = new ResizeObserver(() => {
-      if (!syncing) syncTo(viEl, enEl);
-    });
-    ro.observe(viEl);
-    ro.observe(enEl);
-    setTimeout(() => ro.disconnect(), 15000);
-  }
 }
 
 /* ── Text chapter reader ── */
