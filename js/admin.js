@@ -872,8 +872,8 @@ window.Admin = (() => {
         ? `<img src="${U().esc(p.avatar_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px">`
         : `<span style="display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--border);align-items:center;justify-content:center;font-size:11px;margin-right:8px;vertical-align:middle">${(p.display_name||p.email||'?').charAt(0).toUpperCase()}</span>`;
       const namePart = p.display_name ? `<div style="font-size:12px;font-weight:500">${U().esc(p.display_name)}</div><div style="font-size:10px;color:var(--text-muted)">${U().esc(p.email)}</div>` : `<div style="font-size:12px">${U().esc(p.email)}</div>`;
-      const blockedBadge = p.is_blocked ? `<span style="font-size:9px;background:#3a1515;color:#e05555;border:1px solid #5a2020;padding:1px 5px;border-radius:3px;margin-left:4px">Bị khóa</span>` : '';
-      const meBadge = isMe ? `<span style="font-size:9px;background:#1a2a1a;color:#4caf50;border:1px solid #2a4a2a;padding:1px 5px;border-radius:3px;margin-left:4px">Bạn</span>` : '';
+      const blockedBadge = p.is_blocked ? `<span style="font-size:9px;background:var(--color-error-bg);color:#e05555;border:1px solid var(--color-error-border);padding:1px 5px;border-radius:3px;margin-left:4px">Bị khóa</span>` : '';
+      const meBadge = isMe ? `<span style="font-size:9px;background:var(--color-success-bg);color:#4caf50;border:1px solid #2a4a2a;padding:1px 5px;border-radius:3px;margin-left:4px">Bạn</span>` : '';
 
       const td1 = U().el('td'); td1.style.cssText='padding:10px 14px';
       td1.innerHTML=`<div style="display:flex;align-items:center">${av}<div>${namePart}${blockedBadge}${meBadge}</div></div>`;
@@ -905,7 +905,7 @@ window.Admin = (() => {
           await window._sb.from('profiles').update({is_blocked:!p.is_blocked}).eq('id',p.id);
           await viewUsers(container); container.innerHTML=''; await viewUsers(container);
         });
-      if(p.is_blocked) blockBtn.style.cssText='color:#4caf50;border-color:#2a4a2a';
+      if(p.is_blocked) blockBtn.style.cssText='color:#4caf50;border-color:var(--color-success-border)';
 
       const delBtn = U().mkBtn('btn-danger btn-xs','🗑 Xóa', async()=>{
         if(isMe){alert('Không thể xóa tài khoản của chính mình');return;}

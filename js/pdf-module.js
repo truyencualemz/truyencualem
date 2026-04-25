@@ -37,11 +37,12 @@ window.PDFModule = (() => {
     if (!fileId) {
       throw new Error(`Không tách được file ID từ URL: ${driveUrl?.slice(0,80)}`);
     }
-    if (!App.gdScriptUrl) {
+    const gdUrl = window.App?.gdScriptUrl || window.GD_SCRIPT_URL || '';
+    if (!gdUrl) {
       throw new Error('Chưa thiết lập Apps Script URL — vào Cài đặt để lưu');
     }
 
-    const endpoint = `${App.gdScriptUrl}?fileId=${encodeURIComponent(fileId)}`;
+    const endpoint = `${gdUrl}?fileId=${encodeURIComponent(fileId)}`;
     let res;
     try {
       res = await fetch(endpoint);
@@ -120,7 +121,8 @@ window.PDFModule = (() => {
 
   // ── Prefetch IDB + Drive PDFs for a chapter ───────────
   async function prefetch(comicId, chapIdx) {
-    const comic = App.comics.find(c => c.id === comicId);
+    const comics = window.App?.comics || [];
+    const comic = comics.find(c => c.id === comicId);
     const chap  = comic?.chapters?.[chapIdx];
     if (!chap) return;
     for (const p of chap.pages) for (const lang of ['vi', 'en']) {
@@ -150,7 +152,7 @@ window.PDFModule = (() => {
     // ── IMAGE ─────────────────────────────────────────
     if (d.type === 'image') {
       let src = d.url || d.previewURL || null;
-      if (!src && d.idb) src = await DB.getBlobURL(chapId, pageId, lang);
+      if (!src && d.idb) src = await window.DB?.getBlobURL(chapId, pageId, lang);
       if (!src) return null;
       const img = document.createElement('img');
       img.src = src; img.loading = 'lazy';
@@ -192,7 +194,7 @@ window.PDFModule = (() => {
         try {
           const canvases = await getCanvases(cacheKey, async () => {
             if (d.idb) {
-              const rec = await DB.getPage(chapId, pageId, lang);
+              const rec = await window.DB?.getPage(chapId, pageId, lang);
               return rec?.data || null;
             }
             if (isDriveURL(d.url)) return fetchDrivePDF(d.url);

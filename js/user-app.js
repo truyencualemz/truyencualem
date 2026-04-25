@@ -96,6 +96,9 @@ async function loadUserUI(user) {
     });
   });
 
+  // Load GD Script URL for PDF rendering
+  window.GD_SCRIPT_URL = localStorage.getItem('gd_script_url') || '';
+
   // Load public comics — có thể lỗi nếu RLS chưa cấu hình
   try {
     allComics = await UserDB.loadPublicComics();
