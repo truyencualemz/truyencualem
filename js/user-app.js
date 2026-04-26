@@ -29,6 +29,7 @@ let activeTab = 'home';
 let allComics = [];
 let searchQ   = '';
 let activeGenre = 'all';
+let _libraryPager = null; // infinite scroll instance for home tab
 
 /* ── Reader state ── */
 let rComic=null, rChapIdx=0, rMode='single', rLang='vi', rZoom=100;
@@ -145,6 +146,7 @@ async function renderTab(tab) {
   else if (tab === 'continue')  await renderContinue(c);
   else if (tab === 'bookmarks') await renderBookmarks(c);
   else if (tab === 'account')   renderAccount(c);
+  else if (tab === 'follows')   window.Follow?.renderFollowTab(c, allComics, openChapModal);
 }
 
 /* ── Home: browse library ── */
@@ -185,35 +187,54 @@ function refreshGrid(container) {
 function buildGrid(container) {
   let list = allComics.slice();
   const q = searchQ.toLowerCase().trim();
-  if (q) list=list.filter(m => m.titleVI?.toLowerCase().includes(q)||m.titleEN?.toLowerCase().includes(q));
-  if (activeGenre!=='all') list=list.filter(m=>m.genre===activeGenre);
+  if (q) list = list.filter(m => m.titleVI?.toLowerCase().includes(q)||m.titleEN?.toLowerCase().includes(q));
+  if (activeGenre !== 'all') list = list.filter(m => m.genre === activeGenre);
 
   const info = U.div(); info.style.cssText='font-size:11px;color:var(--text-muted);margin-bottom:10px';
   info.textContent = (q||activeGenre!=='all') ? `${list.length} / ${allComics.length} truyện` : `${allComics.length} truyện`;
   container.appendChild(info);
 
+  const grid = U.div('comic-grid'); container.appendChild(grid);
   if (!list.length) {
-    const em=U.div('empty-state'); em.textContent='Không tìm thấy truyện nào.'; container.appendChild(em); return;
+    const em = U.div('empty-state');
+    em.innerHTML = q ? `Không tìm thấy "<b>${U.esc(q)}</b>"` : 'Không có truyện nào.';
+    grid.appendChild(em); return;
   }
-  const grid = U.div('comic-grid');
-  list.forEach(m => {
-    const card = U.div('comic-card');
-    const genreLabel = GENRES.find(g=>g[0]===m.genre)?.[1]||'';
-    card.innerHTML = `<div class="comic-thumb">${m.cover
-      ? `<img src="${U.esc(m.cover)}" loading="lazy">`
-      : `<span class="comic-thumb-icon">📚</span>`}</div>
+
+  if (window.InfiniteScroll) {
+    _libraryPager = InfiniteScroll.create({
+      container: grid,
+      pageSize: 20,
+      load: async (pg) => list.slice(pg * 20, (pg+1) * 20),
+      render: buildComicCard,
+      empty: q ? `Không tìm thấy "<b>${U.esc(q)}</b>"` : 'Không có truyện nào.',
+    });
+  } else {
+    list.forEach(m => { const el=buildComicCard(m); if(el)grid.appendChild(el); });
+  }
+}
+
+function buildComicCard(m) {
+  const card = U.div('comic-card');
+  const genreLabel = GENRES.find(g=>g[0]===m.genre)?.[1]||'';
+  const q = searchQ.toLowerCase().trim();
+  const titleVI = q
+    ? U.esc(m.titleVI).replace(new RegExp(`(${U.esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark style="background:var(--accent-dim);color:var(--accent);border-radius:2px">$1</mark>')
+    : U.esc(m.titleVI);
+  card.innerHTML = `<div class="comic-thumb">${m.cover
+    ? `<img src="${U.esc(m.cover)}" loading="lazy">`
+    : '<span class="comic-thumb-icon">📚</span>'}</div>
 <div class="comic-info">
-  <div class="comic-title">${U.esc(m.titleVI)}</div>
+  <div class="comic-title">${titleVI}</div>
   <div class="comic-meta">
-    ${genreLabel?`<span class="badge badge-genre">${U.esc(genreLabel)}</span>`:''}
+    ${genreLabel ? `<span class="badge badge-genre">${U.esc(genreLabel)}</span>` : ''}
     <span>${m.chapters?.length||0} ch</span>
   </div>
 </div>`;
-    card.addEventListener('click', () => openChapModal(m));
-    grid.appendChild(card);
-  });
-  container.appendChild(grid);
+  card.addEventListener('click', () => openChapModal(m));
+  return card;
 }
+
 
 /* ── Chapter list modal ── */
 async function openChapModal(comic) {
@@ -228,9 +249,17 @@ async function openChapModal(comic) {
   const closeBtn = U.btn('btn-ghost btn-xs','✕',()=>{ modal.style.display='none'; });
   hdr.appendChild(title); hdr.appendChild(closeBtn); box.appendChild(hdr);
 
+  // Follow button in modal
+  const followRow = U.div(); followRow.style.cssText='padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px';
+  if (window.Follow) {
+    await Follow.loadCache();
+    followRow.appendChild(Follow.buildFollowBtn(comic.id, { onToggle: Follow.updateBadge }));
+  }
+  box.appendChild(followRow);
+
   // Continue reading shortcut
   if (history) {
-    const cont = U.div(); cont.style.cssText='padding:10px 12px;border-bottom:1px solid var(--border);background:#1a2030';
+    const cont = U.div(); cont.style.cssText='padding:10px 12px;border-bottom:1px solid var(--border);background:var(--color-info-bg)';
     const idx = comic.chapters.findIndex(c=>c.id===history.chap_id);
     cont.innerHTML = `<div style="font-size:10px;color:var(--text-muted);margin-bottom:5px">Đang đọc</div>
 <div style="font-size:13px;color:var(--accent);font-weight:500">Ch.${history.chap_num}: ${U.esc(history.chap_title||'')}</div>`;
@@ -476,10 +505,15 @@ async function renderReader() {
 
   /* Top bar */
   const bar = U.div('rbar');
-  const closeBtn = U.btn('btn-ghost btn-sm','← Đóng',closeReader);
+  const closeBtn = U.btn('btn-ghost btn-sm','← Đóng', () => {
+    ReaderEnhance.destroy(); closeReader();
+  });
 
   const rt = U.div('rtitle'); rt.textContent=`${rComic.titleVI} · Ch.${chap.num}: ${chap.title||''}`;
   bar.appendChild(closeBtn); bar.appendChild(rt);
+
+  /* Fullscreen button */
+  if (window.ReaderEnhance) bar.appendChild(ReaderEnhance.buildFsBtn());
 
   /* Bookmark button */
   const bkBtn = U.el('button','bk-btn'); bkBtn.textContent='🔖';
@@ -539,18 +573,32 @@ async function renderReader() {
 
   /* Body */
   const body = U.div(); body.style.cssText='display:flex;flex:1;overflow:hidden;flex-direction:column';
+  let mainScroll = null;
   if (isText) {
     body.appendChild(buildTextLangBar());
     body.appendChild(buildTextCols());
   } else if (rMode==='single') {
-    const scroll=U.div('rscroll'); body.appendChild(scroll);
-    loadSingleImages(scroll, chap, rLang);
+    mainScroll = U.div('rscroll'); body.appendChild(mainScroll);
+    loadSingleImages(mainScroll, chap, rLang);
   } else {
-    // Split mode: dùng grid layout, 1 scroll container, không cần sync
     const grid = U.div(); body.appendChild(grid);
     renderSplitGrid(grid, chap);
   }
   rd.appendChild(body);
+
+  /* ReaderEnhance: init keyboard + scroll save */
+  if (window.ReaderEnhance) {
+    ReaderEnhance.init(rComic.id, chap.id);
+    ReaderEnhance.setupKeyboard({
+      prev: () => { if(rChapIdx > 0) { rChapIdx--; UserDB.saveHistory(rComic.id, rComic.chapters[rChapIdx]); ReaderEnhance.destroy(); renderReader(); } },
+      next: () => { const chaps=rComic.chapters||[]; if(rChapIdx<chaps.length-1){rChapIdx++;UserDB.saveHistory(rComic.id,chaps[rChapIdx]);ReaderEnhance.destroy();renderReader();} },
+      bookmark: () => { document.querySelector('.bk-btn')?.click(); },
+      zoomIn:   () => { rZoom=Math.min(200,rZoom+10); applyZoom(rZoom); },
+      zoomOut:  () => { rZoom=Math.max(30, rZoom-10); applyZoom(rZoom); },
+      close:    () => { ReaderEnhance.destroy(); closeReader(); },
+    });
+    if (mainScroll) ReaderEnhance.attachScrollSave(mainScroll);
+  }
 }
 
 function closeReader() { const rd=document.getElementById('reader'); rd.style.display='none'; rd.innerHTML=''; }
