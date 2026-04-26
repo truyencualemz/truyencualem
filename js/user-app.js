@@ -476,7 +476,21 @@ function renderAccount(container) {
    nhưng tích hợp saveHistory + bookmark
 ══════════════════════════════════════════════════════════ */
 async function openReader(comic, chapIdx) {
-  rComic=comic; rChapIdx=chapIdx; rMode='single'; rLang='vi'; rZoom=100;
+  const LS_MODE = 'md_rmode', LS_LANG = 'md_rlang';
+
+  // Chỉ reset mode/lang khi mở truyện hoàn toàn mới
+  const isNewComic = !rComic || rComic.id !== comic.id;
+  rComic   = comic;
+  rChapIdx = chapIdx;
+
+  if (isNewComic) {
+    // Load saved preferences, fallback to defaults
+    rMode = localStorage.getItem(LS_MODE) || 'single';
+    rLang = localStorage.getItem(LS_LANG) || 'vi';
+    rZoom = 100;
+  }
+  // Else: giữ nguyên rMode, rLang, rZoom đang dùng
+
   const chap = comic.chapters?.[chapIdx];
   if (!chap) return;
 
@@ -489,17 +503,18 @@ async function openReader(comic, chapIdx) {
     if (!rTextData) { alert('Không tìm thấy nội dung chương'); return; }
   }
 
-  // Lưu lịch sử
   await UserDB.saveHistory(comic.id, chap);
 
   const rd = document.getElementById('reader');
-  rd.innerHTML=''; rd.style.display='flex'; rd.style.flexDirection='column';
+  rd.innerHTML = ''; rd.style.display = 'flex'; rd.style.flexDirection = 'column';
   renderReader();
   if (chap.type !== 'text') PDFModule.prefetch(comic.id, chapIdx);
 }
 
 async function renderReader() {
-  const rd = document.getElementById('reader'); rd.innerHTML='';
+  const rd = document.getElementById('reader');
+  // Không clear ở đây — openReader đã clear rồi, chỉ clear khi switch mode/lang
+  rd.innerHTML = '';
   const chap = rComic.chapters?.[rChapIdx]; if(!chap){closeReader();return;}
   const isText = chap.type==='text';
 
@@ -535,13 +550,21 @@ async function renderReader() {
     const mt = U.div('mtog');
     [['single','Đơn'],['split','Song song']].forEach(([m,l])=>{
       const b=U.el('button','mbtn'+(rMode===m?' active':'')); b.textContent=l;
-      b.addEventListener('click',()=>{rMode=m;renderReader();}); mt.appendChild(b);
+      b.addEventListener('click',()=>{
+        rMode=m;
+        localStorage.setItem('md_rmode', m);
+        renderReader();
+      }); mt.appendChild(b);
     }); bar.appendChild(mt);
     if(rMode==='single'){
       const lt=U.div('ltog');
       [['vi','🇻🇳 VI'],['en','🇬🇧 EN']].forEach(([l,lbl])=>{
         const b=U.el('button','lbtn'+(rLang===l?' active':'')); b.textContent=lbl;
-        b.addEventListener('click',()=>{rLang=l;renderReader();}); lt.appendChild(b);
+        b.addEventListener('click',()=>{
+          rLang=l;
+          localStorage.setItem('md_rlang', l);
+          renderReader();
+        }); lt.appendChild(b);
       }); bar.appendChild(lt);
     }
     const zw=U.div('zoom-wrap'), zlbl=U.div('zoom-label'); zlbl.textContent='Size:';
@@ -563,10 +586,14 @@ async function renderReader() {
   /* Nav */
   const chaps=rComic.chapters||[];
   const nav=U.div('rnav');
-  const pb=U.btn('btn-ghost btn-sm','← Trước',async()=>{if(rChapIdx>0){rChapIdx--;await UserDB.saveHistory(rComic.id,chaps[rChapIdx]);renderReader();}});
+  const pb=U.btn('btn-ghost btn-sm','← Trước',async()=>{
+    if(rChapIdx>0){ rChapIdx--; await openReader(rComic, rChapIdx); }
+  });
   pb.disabled=rChapIdx===0;
   const ni=U.div('rni'); ni.textContent=`Ch ${rChapIdx+1} / ${chaps.length}`;
-  const nb=U.btn('btn-ghost btn-sm','Sau →',async()=>{if(rChapIdx<chaps.length-1){rChapIdx++;await UserDB.saveHistory(rComic.id,chaps[rChapIdx]);renderReader();}});
+  const nb=U.btn('btn-ghost btn-sm','Sau →',async()=>{
+    if(rChapIdx<chaps.length-1){ rChapIdx++; await openReader(rComic, rChapIdx); }
+  });
   nb.disabled=rChapIdx>=chaps.length-1;
   [pb,ni,nb].forEach(x=>nav.appendChild(x));
   rd.appendChild(nav);
@@ -590,8 +617,8 @@ async function renderReader() {
   if (window.ReaderEnhance) {
     ReaderEnhance.init(rComic.id, chap.id);
     ReaderEnhance.setupKeyboard({
-      prev: () => { if(rChapIdx > 0) { rChapIdx--; UserDB.saveHistory(rComic.id, rComic.chapters[rChapIdx]); ReaderEnhance.destroy(); renderReader(); } },
-      next: () => { const chaps=rComic.chapters||[]; if(rChapIdx<chaps.length-1){rChapIdx++;UserDB.saveHistory(rComic.id,chaps[rChapIdx]);ReaderEnhance.destroy();renderReader();} },
+      prev: async () => { if(rChapIdx > 0) { await openReader(rComic, rChapIdx - 1); } },
+      next: async () => { const chaps=rComic.chapters||[]; if(rChapIdx<chaps.length-1){ await openReader(rComic, rChapIdx + 1); } },
       bookmark: () => { document.querySelector('.bk-btn')?.click(); },
       zoomIn:   () => { rZoom=Math.min(200,rZoom+10); applyZoom(rZoom); },
       zoomOut:  () => { rZoom=Math.max(30, rZoom-10); applyZoom(rZoom); },
