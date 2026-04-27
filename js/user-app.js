@@ -319,7 +319,8 @@ async function renderContinue(container) {
 <div class="continue-chap">Ch.${h.chap_num}: ${U.esc(h.chap_title||'')}</div>
 <div class="continue-time">${fmtDate(h.updated_at)}</div>`;
     const acts = U.div('continue-actions');
-    const goBtn = U.btn('btn-primary btn-sm','▶ Đọc tiếp',()=>{
+    const goBtn = U.btn('btn-primary btn-sm','▶ Đọc tiếp', e => {
+      e.stopPropagation();
       openReader(allComics.find(m=>m.id===h.comic_id)||{...comic,id:h.comic_id,chapters:[]}, chapIdx>=0?chapIdx:0);
     });
     const delBtn = U.btn('btn-ghost btn-xs','✕',async(e)=>{
@@ -327,6 +328,7 @@ async function renderContinue(container) {
     });
     acts.appendChild(goBtn); acts.appendChild(delBtn);
     card.appendChild(thumb); card.appendChild(info); card.appendChild(acts);
+    // Chỉ 1 click handler trên card — không thêm handler riêng trên button để tránh double fire
     card.addEventListener('click', ()=>{
       openReader(allComics.find(m=>m.id===h.comic_id)||{...comic,id:h.comic_id,chapters:[]}, chapIdx>=0?chapIdx:0);
     });
@@ -361,7 +363,8 @@ async function renderBookmarks(container) {
 <div class="bk-chap">Ch.${bk.chap_num}: ${U.esc(bk.chap_title||'')}</div>
 ${bk.note?`<div class="bk-note">${U.esc(bk.note)}</div>`:''}`;
     const acts = U.div('bk-actions');
-    const goBtn = U.btn('btn-primary btn-xs','▶ Đọc',()=>{
+    const goBtn = U.btn('btn-primary btn-xs','▶ Đọc', e => {
+      e.stopPropagation();
       openReader(allComics.find(m=>m.id===bk.comic_id)||{id:bk.comic_id,chapters:[]}, chapIdx>=0?chapIdx:0);
     });
     const delBtn = U.btn('btn-danger btn-xs','🗑',async()=>{
@@ -475,8 +478,12 @@ function renderAccount(container) {
    READER — dùng lại logic từ admin reader.js / text-reader
    nhưng tích hợp saveHistory + bookmark
 ══════════════════════════════════════════════════════════ */
+let _readerOpening = false;
 async function openReader(comic, chapIdx) {
-  const LS_MODE = 'md_rmode', LS_LANG = 'md_rlang';
+  if (_readerOpening) return;   // chặn double call
+  _readerOpening = true;
+  try {
+    const LS_MODE = 'md_rmode', LS_LANG = 'md_rlang';
 
   // Chỉ reset mode/lang khi mở truyện hoàn toàn mới
   const isNewComic = !rComic || rComic.id !== comic.id;
@@ -509,6 +516,10 @@ async function openReader(comic, chapIdx) {
   rd.innerHTML = ''; rd.style.display = 'flex'; rd.style.flexDirection = 'column';
   renderReader();
   if (chap.type !== 'text') PDFModule.prefetch(comic.id, chapIdx);
+  } finally {
+    // Unlock sau một tick để tránh click nhanh liên tiếp
+    setTimeout(() => { _readerOpening = false; }, 300);
+  }
 }
 
 async function renderReader() {
