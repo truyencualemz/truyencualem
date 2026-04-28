@@ -480,23 +480,16 @@ function renderAccount(container) {
 ══════════════════════════════════════════════════════════ */
 let _readerOpening = false;
 async function openReader(comic, chapIdx) {
-  if (_readerOpening) return;   // chặn double call
+  if (_readerOpening) return;
   _readerOpening = true;
   try {
-    const LS_MODE = 'md_rmode', LS_LANG = 'md_rlang';
-
-  // Chỉ reset mode/lang khi mở truyện hoàn toàn mới
-  const isNewComic = !rComic || rComic.id !== comic.id;
-  rComic   = comic;
-  rChapIdx = chapIdx;
-
-  if (isNewComic) {
-    // Load saved preferences, fallback to defaults
-    rMode = localStorage.getItem(LS_MODE) || 'single';
-    rLang = localStorage.getItem(LS_LANG) || 'vi';
-    rZoom = 100;
-  }
-  // Else: giữ nguyên rMode, rLang, rZoom đang dùng
+    // Luôn load mode/lang từ localStorage — đảm bảo đúng preference dù đóng/mở lại
+    rComic   = comic;
+    rChapIdx = chapIdx;
+    rMode    = localStorage.getItem('md_rmode') || 'single';
+    rLang    = localStorage.getItem('md_rlang') || 'vi';
+    // Chỉ reset zoom khi mở truyện mới hoàn toàn (không reset khi chuyển chương cùng truyện)
+    if (!rZoom || rZoom < 30) rZoom = 100;
 
   const chap = comic.chapters?.[chapIdx];
   if (!chap) return;
@@ -648,7 +641,12 @@ async function renderReader() {
   }
 }
 
-function closeReader() { const rd=document.getElementById('reader'); rd.style.display='none'; rd.innerHTML=''; }
+function closeReader() {
+  const rd = document.getElementById('reader');
+  rd.style.display = 'none';
+  rd.innerHTML = '';
+  rComic = null; // reset để lần mở sau luôn load localStorage
+}
 
 function applyZoom(zoom) {
   rZoom=zoom;
