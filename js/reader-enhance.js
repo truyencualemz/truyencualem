@@ -121,8 +121,8 @@ window.ReaderEnhance = (() => {
     const scroll = document.querySelector('#reader .rscroll')
                 || document.querySelector('#reader [style*="overflow-y:auto"]');
     if (!scroll) return;
-    // Tìm trang theo data-page hoặc thứ tự .rpiw
-    const pages = scroll.querySelectorAll('.rpiw, .split-page[data-page]');
+    // Single view: .rpiw, Split view: .grid-row
+    const pages = scroll.querySelectorAll('.rpiw, .grid-row');
     const target = pages[pageIdx];
     if (target) {
       const offset = target.offsetTop + ratio * (target.offsetHeight || 0);
@@ -134,7 +134,8 @@ window.ReaderEnhance = (() => {
     if (!_isUserPage || !window._sb || !_comicId) return;
     clearTimeout(_saveTimer);
     _saveTimer = setTimeout(async () => {
-      const pages = scrollEl.querySelectorAll('.rpiw, .split-page');
+      // Single view: .rpiw, Split view: .grid-row
+      const pages = scrollEl.querySelectorAll('.rpiw, .grid-row');
       if (!pages.length) return;
       const top = scrollEl.scrollTop;
       let pageIdx = 0;
@@ -154,13 +155,19 @@ window.ReaderEnhance = (() => {
           updated_at:   new Date().toISOString(),
         }, { onConflict: 'user_id,comic_id' });
       } catch {}
-    }, 1500); // debounce 1.5s
+    }, 1500);
   }
 
   function attachScrollSave(scrollEl) {
     if (!scrollEl) return;
     scrollEl.addEventListener('scroll',
       () => saveScrollPosition(scrollEl), { passive: true });
+  }
+
+  function attachScrollSaveDelayed(scrollEl, delay = 500) {
+    // Dùng cho split grid — cần đợi ảnh render mới có offsetTop đúng
+    if (!scrollEl) return;
+    setTimeout(() => attachScrollSave(scrollEl), delay);
   }
 
   /* ══ DESTROY ══════════════════════════════════════════ */
@@ -176,5 +183,5 @@ window.ReaderEnhance = (() => {
 
   document.addEventListener('fullscreenchange', updateFsBtn);
 
-  return { init, destroy, toggleFullscreen, buildFsBtn, setupKeyboard, attachScrollSave };
+  return { init, destroy, toggleFullscreen, buildFsBtn, setupKeyboard, attachScrollSave, attachScrollSaveDelayed };
 })();

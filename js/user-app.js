@@ -619,7 +619,10 @@ async function renderReader() {
     mainScroll = U.div('rscroll'); body.appendChild(mainScroll);
     loadSingleImages(mainScroll, chap, rLang);
   } else {
-    const grid = U.div(); body.appendChild(grid);
+    const grid = U.div();
+    grid.style.cssText = 'flex:1;overflow-y:auto;background:var(--reader-bg)';
+    body.appendChild(grid);
+    mainScroll = grid;  // gán để ReaderEnhance có thể save/restore scroll
     renderSplitGrid(grid, chap);
   }
   rd.appendChild(body);
@@ -635,7 +638,13 @@ async function renderReader() {
       zoomOut:  () => { rZoom=Math.max(30, rZoom-10); applyZoom(rZoom); },
       close:    () => { ReaderEnhance.destroy(); closeReader(); },
     });
-    if (mainScroll) ReaderEnhance.attachScrollSave(mainScroll);
+    if (mainScroll) {
+      if (rMode === 'split') {
+        ReaderEnhance.attachScrollSaveDelayed(mainScroll, 800);
+      } else {
+        ReaderEnhance.attachScrollSave(mainScroll);
+      }
+    }
   }
 }
 
@@ -677,7 +686,8 @@ function loadSplitImages(viScroll, enScroll, chap) {
 function renderSplitGrid(container, chap) {
   const pages = chap.pages || [];
   container.innerHTML = '';
-  container.style.cssText = 'flex:1;overflow-y:auto;padding:8px;background:var(--reader-bg)';
+  // padding bên trong, overflow được set bởi parent
+  container.style.padding = '0';
 
   if (!pages.length) {
     const ph = U.div('rnoph');
@@ -686,22 +696,30 @@ function renderSplitGrid(container, chap) {
     return;
   }
 
-  // Header row
+  // Wrapper có padding để sticky header hoạt động đúng
+  const inner = U.div();
+  inner.style.cssText = 'padding:8px;min-height:100%';
+
+  // Header — sticky relative to scroll container
   const hdr = U.div();
-  hdr.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;position:sticky;top:0;z-index:10;background:var(--reader-bg);padding-bottom:4px';
+  hdr.style.cssText = [
+    'display:grid;grid-template-columns:1fr 1fr;gap:4px',
+    'margin-bottom:4px;position:sticky;top:0;z-index:10',
+    'background:var(--reader-bg);padding:4px 0',
+  ].join(';');
   ['VI 🇻🇳','EN 🇬🇧'].forEach(lbl => {
     const c = U.div();
-    c.style.cssText = 'text-align:center;font-size:10px;font-family:monospace;color:var(--text-muted);padding:3px 0';
+    c.style.cssText = 'text-align:center;font-size:10px;font-family:monospace;color:var(--text-muted);padding:2px 0';
     c.textContent = lbl;
     hdr.appendChild(c);
   });
-  container.appendChild(hdr);
+  inner.appendChild(hdr);
 
   pages.forEach((p, i) => {
-    // Row: 2 ô cạnh nhau, tự stretch theo ảnh to hơn
     const row = U.div();
+    row.className = 'grid-row';   // dùng để scroll restore
+    row.dataset.page = i;         // 0-indexed
     row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;align-items:start';
-    row.dataset.page = i + 1;
 
     ['vi', 'en'].forEach(lang => {
       const cell = U.div();
@@ -732,8 +750,10 @@ function renderSplitGrid(container, chap) {
       row.appendChild(cell);
     });
 
-    container.appendChild(row);
+    inner.appendChild(row);
   });
+
+  container.appendChild(inner);
 }
 
 /* ── Text chapter reader ── */
