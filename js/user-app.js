@@ -465,6 +465,14 @@ function renderAccount(container) {
 
   // Danger zone
   const dangerCard = U.div(); dangerCard.style.cssText='background:var(--bg-primary);border:1px solid #3a2020;border-radius:10px;padding:20px';
+  // Donate section (chỉ cho publisher/admin)
+  if (window.Donate && (window.CURRENT_ROLE === 'admin' || window.CURRENT_ROLE === 'publisher')) {
+    Auth.getProfile?.().then(profile => {
+      const ds = Donate.buildAdminDonateSection(profile);
+      container.appendChild(ds);
+    });
+  }
+
   dangerCard.innerHTML='<div style="font-size:12px;font-weight:500;margin-bottom:12px;color:#e05555">Đăng xuất</div>';
   const soBtn=U.btn('btn-danger btn-sm','Đăng xuất khỏi tài khoản',async()=>{
     if(confirm('Đăng xuất?')) await Auth.signOut();
@@ -533,6 +541,9 @@ async function renderReader() {
 
   /* Fullscreen button */
   if (window.ReaderEnhance) bar.appendChild(ReaderEnhance.buildFsBtn());
+
+  /* Donate button */
+  if (window.Donate && !isText) bar.appendChild(Donate.buildDonateBtn(rComic.id));
 
   /* Bookmark button */
   const bkBtn = U.el('button','bk-btn'); bkBtn.textContent='🔖';
@@ -619,6 +630,30 @@ async function renderReader() {
     renderSplitGrid(grid, chap);
   }
   rd.appendChild(body);
+
+  /* Comment panel — cuộn cùng với body, sau khi body render xong */
+  if (window.Comments && chap && !isText) {
+    const commentWrap = U.div();
+    commentWrap.style.cssText = 'flex-shrink:0;border-top:1px solid var(--border);max-height:45vh;overflow-y:auto;background:var(--bg-app)';
+    const toggleBtn = U.el('button','btn btn-ghost btn-xs');
+    toggleBtn.style.cssText='margin:8px 16px;font-size:11px';
+    toggleBtn.textContent='💬 Bình luận';
+    let opened=false;
+    const panelEl=U.div();
+    toggleBtn.addEventListener('click',async()=>{
+      opened=!opened;
+      if(opened){
+        toggleBtn.textContent='💬 Ẩn bình luận';
+        await Comments.renderPanel(chap.id, rComic.id, panelEl);
+      } else {
+        toggleBtn.textContent='💬 Bình luận';
+        panelEl.innerHTML='';
+      }
+    });
+    commentWrap.appendChild(toggleBtn);
+    commentWrap.appendChild(panelEl);
+    rd.appendChild(commentWrap);
+  }
 
   /* ReaderEnhance: init keyboard + scroll save */
   if (window.ReaderEnhance) {
