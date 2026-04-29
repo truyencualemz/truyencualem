@@ -146,6 +146,14 @@ alter table public.profiles
   add column if not exists donate_qr_url  text default '',
   add column if not exists donate_note    text default '';
 
+-- Cho phép user đã đăng nhập đọc thông tin donate của tác giả
+alter table public.profiles enable row level security;
+
+drop policy if exists "profiles: public read donate" on public.profiles;
+create policy "profiles: public read donate"
+  on public.profiles for select
+  using (auth.role() = 'authenticated');
+
 -- ── 8. Cấp role publisher ──────────────────────────────────────────
 -- Chạy riêng dòng này để cấp publisher cho tài khoản:
 -- update public.profiles set role = 'publisher' where email = 'publisher@email.com';

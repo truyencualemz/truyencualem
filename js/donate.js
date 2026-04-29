@@ -29,14 +29,20 @@ window.Donate = (() => {
 
   /* ── Load donate info của owner một bộ comic ── */
   async function loadComicDonate(comicId) {
-    // Join qua bảng comics để lấy user_id của owner
-    const { data } = await sb()
+    const { data: comic } = await sb()
       .from('comics')
-      .select('user_id, profiles:user_id ( display_name, donate_momo, donate_qr_url, donate_note )')
+      .select('user_id')
       .eq('id', comicId)
       .single();
-    if (!data?.profiles) return null;
-    return { userId: data.user_id, ...data.profiles };
+    if (!comic?.user_id) return null;
+
+    const { data: profile } = await sb()
+      .from('profiles')
+      .select('display_name, donate_momo, donate_qr_url, donate_note')
+      .eq('id', comic.user_id)
+      .single();
+    if (!profile) return null;
+    return { userId: comic.user_id, ...profile };
   }
 
   /* ══ UI ════════════════════════════════════════════════ */
