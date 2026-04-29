@@ -479,6 +479,8 @@ ${provider === 'email' ? `
     onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
 </div>` : ''}
 
+<div id="profile-donate-wrap"></div>
+
 <div style="display:flex;gap:8px">
   <button id="profile-save"
     style="flex:1;background:var(--accent);color:var(--bg-primary);border:none;border-radius:6px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
@@ -500,6 +502,14 @@ ${provider === 'email' ? `
 
     box.querySelector('#profile-close').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    // Donate section (admin/publisher)
+    const role = window.CURRENT_ROLE;
+    if (window.Donate && (role === 'admin' || role === 'publisher')) {
+      const donateWrap = box.querySelector('#profile-donate-wrap');
+      donateWrap.style.cssText = 'border-top:1px solid var(--border);padding-top:14px;margin-top:4px;margin-bottom:14px';
+      donateWrap.appendChild(Donate.buildAdminDonateSection(window.CURRENT_PROFILE || null));
+    }
 
     box.querySelector('#profile-save').addEventListener('click', async () => {
       const btn  = box.querySelector('#profile-save');
