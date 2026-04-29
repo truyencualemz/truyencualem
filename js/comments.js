@@ -12,17 +12,33 @@ window.Comments = (() => {
 
   /* ── Load comments của 1 chương ── */
   async function load(chapId) {
-    const { data, error } = await sb()
+    const { data: comments, error } = await sb()
       .from('comments')
-      .select(`
-        id, user_id, parent_id, body, is_deleted, created_at,
-        profiles:user_id ( display_name, avatar_url, role ),
-        reactions:comment_reactions ( user_id, emoji )
-      `)
+      .select('id, user_id, parent_id, body, is_deleted, created_at')
       .eq('chap_id', chapId)
       .order('created_at', { ascending: true });
     if (error) throw error;
-    return data || [];
+    if (!comments?.length) return [];
+
+    const ids     = comments.map(c => c.id);
+    const userIds = [...new Set(comments.map(c => c.user_id))];
+
+    const [{ data: reactions }, { data: profiles }] = await Promise.all([
+      sb().from('comment_reactions').select('comment_id, user_id, emoji').in('comment_id', ids),
+      sb().from('profiles').select('id, display_name, avatar_url, role').in('id', userIds),
+    ]);
+
+    const profileMap  = Object.fromEntries((profiles  || []).map(p => [p.id, p]));
+    const reactionMap = {};
+    (reactions || []).forEach(r => {
+      (reactionMap[r.comment_id] ??= []).push(r);
+    });
+
+    return comments.map(c => ({
+      ...c,
+      profiles:  profileMap[c.user_id] || null,
+      reactions: reactionMap[c.id]     || [],
+    }));
   }
 
   /* ── Đăng comment mới ── */
