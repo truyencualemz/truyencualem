@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>MangaDesk — Đọc Truyện</title>
+<title>LemComics — Đọc Truyện</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8a96e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LemComics">
+<link rel="apple-touch-icon" href="icons/icon.svg">
 <style>
 /* ── Theme CSS Variables ── */
 :root {
@@ -234,6 +240,11 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 <script src="js/user-app.js"></script>
 <script src="js/comments.js"></script>
 <script src="js/donate.js"></script>
-<script>initUser();</script>
+<script>
+  initUser();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+</script>
 </body>
 </html>

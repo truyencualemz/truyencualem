@@ -667,6 +667,10 @@ async function renderReader() {
       zoomOut:  () => { rZoom=Math.max(30, rZoom-10); applyZoom(rZoom); },
       close:    () => { ReaderEnhance.destroy(); closeReader(); },
     });
+    ReaderEnhance.setupSwipe({
+      prev: async () => { if (rChapIdx > 0) await openReader(rComic, rChapIdx - 1); },
+      next: async () => { const c = rComic.chapters||[]; if (rChapIdx < c.length - 1) await openReader(rComic, rChapIdx + 1); },
+    });
     if (mainScroll) {
       if (rMode === 'split') {
         ReaderEnhance.attachScrollSaveDelayed(mainScroll, 800);

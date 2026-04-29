@@ -8,6 +8,7 @@ window.ReaderEnhance = (() => {
   let _isFullscreen = false;
   let _saveTimer = null;
   let _keyHandler = null;
+  let _swipe = null;
   let _isUserPage = !!window.IS_USER_PAGE;
 
   /* ══ FULLSCREEN ══════════════════════════════════════ */
@@ -97,6 +98,40 @@ window.ReaderEnhance = (() => {
     setTimeout(() => hint.remove(), 4200);
   }
 
+  /* ══ SWIPE GESTURE ══════════════════════════════════ */
+  function setupSwipe(callbacks) {
+    const rd = document.getElementById('reader');
+    if (!rd) return;
+
+    let sx, sy, dir;
+
+    function onStart(e) {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      dir = null;
+    }
+    function onMove(e) {
+      if (!e.touches.length) return;
+      if (dir === null) {
+        const dx = Math.abs(e.touches[0].clientX - sx);
+        const dy = Math.abs(e.touches[0].clientY - sy);
+        if (dx > 8 || dy > 8) dir = dx > dy ? 'h' : 'v';
+      }
+      if (dir === 'h') e.preventDefault();
+    }
+    function onEnd(e) {
+      if (dir !== 'h') return;
+      const dx = e.changedTouches[0].clientX - sx;
+      if (Math.abs(dx) < 50) return;
+      dx < 0 ? callbacks.next?.() : callbacks.prev?.();
+    }
+
+    rd.addEventListener('touchstart', onStart, { passive: true });
+    rd.addEventListener('touchmove',  onMove,  { passive: false });
+    rd.addEventListener('touchend',   onEnd,   { passive: true });
+    _swipe = { el: rd, onStart, onMove, onEnd };
+  }
+
   /* ══ SCROLL POSITION SYNC ════════════════════════════ */
   function init(comicId, chapId) {
     _comicId = comicId; _chapId = chapId;
@@ -176,6 +211,12 @@ window.ReaderEnhance = (() => {
       document.removeEventListener('keydown', _keyHandler);
       _keyHandler = null;
     }
+    if (_swipe) {
+      _swipe.el.removeEventListener('touchstart', _swipe.onStart);
+      _swipe.el.removeEventListener('touchmove',  _swipe.onMove);
+      _swipe.el.removeEventListener('touchend',   _swipe.onEnd);
+      _swipe = null;
+    }
     clearTimeout(_saveTimer);
     if (document.fullscreenElement) document.exitFullscreen?.();
     _comicId = null; _chapId = null;
@@ -183,5 +224,5 @@ window.ReaderEnhance = (() => {
 
   document.addEventListener('fullscreenchange', updateFsBtn);
 
-  return { init, destroy, toggleFullscreen, buildFsBtn, setupKeyboard, attachScrollSave, attachScrollSaveDelayed };
+  return { init, destroy, toggleFullscreen, buildFsBtn, setupKeyboard, setupSwipe, attachScrollSave, attachScrollSaveDelayed };
 })();
