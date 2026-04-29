@@ -140,12 +140,19 @@ create policy "text_chaps: read published"
     )
   );
 
--- ── 7. Cấp role publisher ──────────────────────────────────────────
+-- ── 7. Thêm cột donate vào profiles ──────────────────────────────
+alter table public.profiles
+  add column if not exists donate_momo    text default '',
+  add column if not exists donate_qr_url  text default '',
+  add column if not exists donate_note    text default '';
+
+-- ── 8. Cấp role publisher ──────────────────────────────────────────
 -- Chạy riêng dòng này để cấp publisher cho tài khoản:
 -- update public.profiles set role = 'publisher' where email = 'publisher@email.com';
 
 -- ══════════════════════════════════════════════════════════════════
 -- Xong! Sau khi chạy:
--- 1. Publisher đăng nhập vào index.html
+-- 1. Publisher đăng nhập vào adminmanagement.html
 -- 2. Chỉ thấy truyện của mình + không có mục Users/Cài đặt
+-- 3. Admin/Publisher có thể cấu hình donate trong Cài đặt → ☕
 -- ══════════════════════════════════════════════════════════════════

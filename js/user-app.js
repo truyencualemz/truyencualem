@@ -463,16 +463,17 @@ function renderAccount(container) {
     wrap.appendChild(passCard);
   }
 
-  // Danger zone
-  const dangerCard = U.div(); dangerCard.style.cssText='background:var(--bg-primary);border:1px solid #3a2020;border-radius:10px;padding:20px';
   // Donate section (chỉ cho publisher/admin)
   if (window.Donate && (window.CURRENT_ROLE === 'admin' || window.CURRENT_ROLE === 'publisher')) {
+    const donateWrap = U.div();
+    wrap.appendChild(donateWrap);
     Auth.getProfile?.().then(profile => {
-      const ds = Donate.buildAdminDonateSection(profile);
-      container.appendChild(ds);
+      donateWrap.appendChild(Donate.buildAdminDonateSection(profile));
     });
   }
 
+  // Danger zone
+  const dangerCard = U.div(); dangerCard.style.cssText='background:var(--bg-primary);border:1px solid #3a2020;border-radius:10px;padding:20px';
   dangerCard.innerHTML='<div style="font-size:12px;font-weight:500;margin-bottom:12px;color:#e05555">Đăng xuất</div>';
   const soBtn=U.btn('btn-danger btn-sm','Đăng xuất khỏi tài khoản',async()=>{
     if(confirm('Đăng xuất?')) await Auth.signOut();

@@ -592,6 +592,7 @@ window.Admin = (() => {
     w.innerHTML = '<div style="font-family:monospace;font-size:15px;margin-bottom:16px">Cài đặt hệ thống</div>';
 
     // Storage usage
+    const donateProfile = window.Donate ? await Donate.loadDonateInfo(Auth.getUserId()) : null;
     const usage = await DB.getUsage();
     if (usage) {
       const pct = Math.round(usage.usage / usage.quota * 100), color = pct > 80 ? '#e05555' : pct > 50 ? '#e0a030' : '#4caf50';
@@ -706,6 +707,7 @@ window.Admin = (() => {
     });
 
     w.appendChild(gdCard);
+    if (window.Donate) w.appendChild(Donate.buildAdminDonateSection(donateProfile));
     if (window.Announce) w.appendChild(Announce.buildAdminSection());
     w.appendChild(storeCard);
     w.appendChild(verCard);
