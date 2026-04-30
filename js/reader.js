@@ -4,18 +4,37 @@
    luôn khớp trang N EN, không drift dù chiều cao khác nhau.
 ──────────────────────────────────────────────────────────── */
 window.Reader = (() => {
+  let _navDir = 0;
+
+  function _setupImgFade(el) {
+    const imgs = el.tagName === 'IMG' ? [el] : Array.from(el.querySelectorAll('img'));
+    imgs.forEach(img => {
+      if (img.complete && img.naturalWidth > 0) img.classList.add('rimg-ready');
+      else img.addEventListener('load', () => img.classList.add('rimg-ready'), {once:true});
+    });
+  }
+
   function open(comicId, chapIdx, mode, lang) {
     App.rComicId = comicId; App.rChapIdx = chapIdx;
     App.rMode = mode; App.rLang = lang; App.rZoom = 100;
     const rd = document.getElementById('reader');
     rd.innerHTML = ''; rd.style.display = 'flex'; rd.style.flexDirection = 'column';
+    rd.style.transition = ''; rd.style.opacity = ''; rd.style.transform = '';
+    rd.classList.remove('anim-slide-up'); void rd.offsetWidth; rd.classList.add('anim-slide-up');
     render();
     PDFModule.prefetch(comicId, chapIdx);
   }
 
   function close() {
     const rd = document.getElementById('reader');
-    rd.style.display = 'none'; rd.innerHTML = '';
+    rd.classList.remove('anim-slide-up');
+    rd.style.transition = 'opacity .2s,transform .2s';
+    void rd.offsetWidth;
+    rd.style.opacity = '0'; rd.style.transform = 'translateY(16px)';
+    setTimeout(() => {
+      rd.style.display = 'none'; rd.innerHTML = '';
+      rd.style.transition = ''; rd.style.opacity = ''; rd.style.transform = '';
+    }, 220);
   }
 
   function render() {
@@ -69,12 +88,12 @@ window.Reader = (() => {
     /* chapter nav */
     const nav = UI.div('rnav');
     const pb = UI.mkBtn('btn-ghost btn-sm', '← Trước', () => {
-      if (App.rChapIdx > 0) { App.rChapIdx--; render(); PDFModule.prefetch(App.rComicId, App.rChapIdx); }
+      if (App.rChapIdx > 0) { _navDir = -1; App.rChapIdx--; render(); PDFModule.prefetch(App.rComicId, App.rChapIdx); }
     });
     pb.disabled = App.rChapIdx === 0;
     const ni = UI.div('rni'); ni.textContent = `Ch ${App.rChapIdx + 1} / ${chaps.length}`;
     const nb = UI.mkBtn('btn-ghost btn-sm', 'Sau →', () => {
-      if (App.rChapIdx < chaps.length - 1) { App.rChapIdx++; render(); PDFModule.prefetch(App.rComicId, App.rChapIdx); }
+      if (App.rChapIdx < chaps.length - 1) { _navDir = 1; App.rChapIdx++; render(); PDFModule.prefetch(App.rComicId, App.rChapIdx); }
     });
     nb.disabled = App.rChapIdx >= chaps.length - 1;
     const jw = UI.div('rj'), jl = UI.div('rjl'); jl.textContent = 'Đến chương:';
@@ -92,6 +111,10 @@ window.Reader = (() => {
     /* body */
     const body = UI.div();
     body.style.cssText = 'display:flex;flex:1;overflow:hidden;flex-direction:column';
+    if (_navDir !== 0) {
+      body.classList.add(_navDir > 0 ? 'anim-slide-rtl' : 'anim-slide-ltr');
+      _navDir = 0;
+    }
 
     if (App.rMode === 'single') {
       const scroll = UI.div('rscroll'); body.appendChild(scroll);
@@ -135,7 +158,7 @@ window.Reader = (() => {
       const w = UI.div('rpiw');
       if (ws) { w.style.width = ws; w.style.maxWidth = 'none'; }
       const pageEl = await PDFModule.buildPageEl(d, chap.id, p.id, lang, ws);
-      if (pageEl) { w.appendChild(pageEl); container.appendChild(w); }
+      if (pageEl) { _setupImgFade(pageEl); w.appendChild(pageEl); container.appendChild(w); }
       else { const ph = UI.div('rnoph'); ph.textContent = '[lỗi tải trang]'; container.appendChild(ph); }
     }
   }
@@ -281,7 +304,7 @@ window.Reader = (() => {
           const spin = UI.div('pdf-spin'); spin.textContent = ' '; cell.appendChild(spin);
           PDFModule.buildPageEl(d, chap.id, p.id, lang, null).then(el => {
             if (cell.contains(spin)) cell.removeChild(spin);
-            if (el) { el.style.cssText = 'width:100%;height:auto;display:block'; cell.appendChild(el); }
+            if (el) { el.style.cssText = 'width:100%;height:auto;display:block'; _setupImgFade(el); cell.appendChild(el); }
             else { const ph = UI.div('spno'); ph.textContent = '[lỗi]'; cell.appendChild(ph); }
           });
         }

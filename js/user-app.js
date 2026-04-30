@@ -142,6 +142,7 @@ Lỗi tải truyện: ${U.esc(e.message)}<br>
 ══════════════════════════════════════════════════════════ */
 async function renderTab(tab) {
   const c = document.getElementById('content'); c.innerHTML = '';
+  c.classList.remove('anim-fade-up'); void c.offsetWidth; c.classList.add('anim-fade-up');
   if (tab === 'home')           renderHome(c);
   else if (tab === 'continue')  await renderContinue(c);
   else if (tab === 'bookmarks') await renderBookmarks(c);
@@ -285,6 +286,7 @@ async function openChapModal(comic) {
   });
   box.appendChild(list);
   modal.style.display = 'flex';
+  box.classList.remove('anim-scale-in'); void box.offsetWidth; box.classList.add('anim-scale-in');
   modal.addEventListener('click', e => { if(e.target===modal) modal.style.display='none'; }, {once:true});
 }
 

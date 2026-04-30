@@ -140,6 +140,19 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 .pdf-spin{display:flex;align-items:center;justify-content:center;padding:16px;color:var(--text-muted);font-size:10px;gap:8px;min-height:40px}
 .pdf-spin::before{content:'';width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes slide-up{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:none}}
+@keyframes scale-in{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+@keyframes slide-ltr{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+@keyframes slide-rtl{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+.anim-fade-up{animation:fade-up .22s cubic-bezier(.22,1,.36,1) both}
+.anim-slide-up{animation:slide-up .28s cubic-bezier(.22,1,.36,1) both}
+.anim-scale-in{animation:scale-in .22s cubic-bezier(.22,1,.36,1) both}
+.anim-slide-ltr{animation:slide-ltr .2s cubic-bezier(.22,1,.36,1) both}
+.anim-slide-rtl{animation:slide-rtl .2s cubic-bezier(.22,1,.36,1) both}
+#reader img{opacity:0;transition:opacity .35s ease}
+#reader img.rimg-ready{opacity:1}
+.chap-modal-box{transform-origin:center top}
 
 /* ── Text reader ── */
 .tbar-langs{padding:7px 14px;background:var(--bg-secondary);border-bottom:1px solid var(--bg-tertiary);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
