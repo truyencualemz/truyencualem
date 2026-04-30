@@ -6,14 +6,6 @@
 window.Reader = (() => {
   let _navDir = 0;
 
-  function _setupImgFade(el) {
-    const imgs = el.tagName === 'IMG' ? [el] : Array.from(el.querySelectorAll('img'));
-    imgs.forEach(img => {
-      if (img.complete && img.naturalWidth > 0) img.classList.add('rimg-ready');
-      else img.addEventListener('load', () => img.classList.add('rimg-ready'), {once:true});
-    });
-  }
-
   function open(comicId, chapIdx, mode, lang) {
     App.rComicId = comicId; App.rChapIdx = chapIdx;
     App.rMode = mode; App.rLang = lang; App.rZoom = 100;
@@ -158,7 +150,7 @@ window.Reader = (() => {
       const w = UI.div('rpiw');
       if (ws) { w.style.width = ws; w.style.maxWidth = 'none'; }
       const pageEl = await PDFModule.buildPageEl(d, chap.id, p.id, lang, ws);
-      if (pageEl) { _setupImgFade(pageEl); w.appendChild(pageEl); container.appendChild(w); }
+      if (pageEl) { w.appendChild(pageEl); container.appendChild(w); }
       else { const ph = UI.div('rnoph'); ph.textContent = '[lỗi tải trang]'; container.appendChild(ph); }
     }
   }
@@ -304,7 +296,7 @@ window.Reader = (() => {
           const spin = UI.div('pdf-spin'); spin.textContent = ' '; cell.appendChild(spin);
           PDFModule.buildPageEl(d, chap.id, p.id, lang, null).then(el => {
             if (cell.contains(spin)) cell.removeChild(spin);
-            if (el) { el.style.cssText = 'width:100%;height:auto;display:block'; _setupImgFade(el); cell.appendChild(el); }
+            if (el) { el.style.cssText = 'width:100%;height:auto;display:block'; cell.appendChild(el); }
             else { const ph = UI.div('spno'); ph.textContent = '[lỗi]'; cell.appendChild(ph); }
           });
         }

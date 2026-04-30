@@ -150,8 +150,8 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 .anim-scale-in{animation:scale-in .22s cubic-bezier(.22,1,.36,1) both}
 .anim-slide-ltr{animation:slide-ltr .2s cubic-bezier(.22,1,.36,1) both}
 .anim-slide-rtl{animation:slide-rtl .2s cubic-bezier(.22,1,.36,1) both}
-#reader img{opacity:0;transition:opacity .35s ease}
-#reader img.rimg-ready{opacity:1}
+@keyframes img-fade{from{opacity:0}to{opacity:1}}
+#reader .rpiw img,#reader .grid-row img{animation:img-fade .4s ease both}
 .chap-modal-box{transform-origin:center top}
 
 /* ── Text reader ── */

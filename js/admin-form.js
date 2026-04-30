@@ -36,11 +36,18 @@ window.AdminForm = (() => {
     card.appendChild(ab);
 
     const tbl = U().el('table', 'pt');
-    tbl.innerHTML = '<thead><tr><th>#</th><th><span class="lt lvi">VI</span></th><th><span class="lt len">EN</span></th><th>Ghi chú</th><th>Căn lệch</th><th></th></tr></thead>';
+    tbl.innerHTML = '<thead><tr><th style="width:16px;color:#444;font-weight:400">⠿</th><th>#</th><th><span class="lt lvi">VI</span></th><th><span class="lt len">EN</span></th><th>Ghi chú</th><th>Căn lệch</th><th></th></tr></thead>';
     const tb = U().el('tbody');
+    let _dragIdx = null;
 
     pages.forEach((p, i) => {
       const tr = U().el('tr', !!p.vi !== !!p.en ? 'mis' : '');
+      tr.draggable = true;
+
+      const tdH = U().el('td', 'pn');
+      tdH.innerHTML = '<span style="color:#555;cursor:grab;user-select:none">⠿</span>';
+      tr.appendChild(tdH);
+
       const td0 = U().el('td', 'pn'); td0.textContent = i + 1; tr.appendChild(td0);
       tr.appendChild(makeThumbCell(p, 'vi', i));
       tr.appendChild(makeThumbCell(p, 'en', i));
@@ -65,6 +72,25 @@ window.AdminForm = (() => {
       const tdd = U().el('td');
       tdd.appendChild(U().mkBtn('btn-danger btn-xxs', '✕', () => { pages.splice(i, 1); refreshTable(); }));
       tr.appendChild(tdd);
+
+      tr.addEventListener('dragstart', e => {
+        _dragIdx = i; tr.style.opacity = '.4';
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      tr.addEventListener('dragend', () => { tr.style.opacity = ''; });
+      tr.addEventListener('dragover', e => {
+        e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+        tr.style.outline = '2px solid var(--accent)';
+      });
+      tr.addEventListener('dragleave', () => { tr.style.outline = ''; });
+      tr.addEventListener('drop', e => {
+        e.stopPropagation(); tr.style.outline = '';
+        if (_dragIdx === null || _dragIdx === i) return;
+        const [moved] = pages.splice(_dragIdx, 1);
+        pages.splice(i, 0, moved);
+        refreshTable();
+      });
+
       tb.appendChild(tr);
     });
     tbl.appendChild(tb); card.appendChild(tbl);
@@ -215,11 +241,50 @@ window.AdminForm = (() => {
       up.appendChild(uz); col.appendChild(up);
 
       const uh = U().div('urlhint');
-      uh.innerHTML = '<b>Google Drive:</b> Share link → paste<br><b>Imgur / khác:</b> URL trực tiếp đến ảnh/PDF';
+      uh.innerHTML = '<b>Google Drive:</b> Share link → paste<br><b>Imgur / ImgBB / khác:</b> URL trực tiếp đến ảnh/PDF';
       const ul = U().div(); ul.id = 'ul-' + lang; ul.style.marginTop = '7px';
       const ab = U().mkBtn('btn-ghost btn-xs', lang === 'vi' ? '+ Thêm URL' : '+ Add URL', () => addURLRow(lang));
       ab.style.cssText = 'margin-top:5px;width:100%';
-      urlp.appendChild(uh); urlp.appendChild(ul); urlp.appendChild(ab);
+
+      // Bulk import textarea
+      const bulkWrap = U().div();
+      bulkWrap.style.cssText = 'border-top:1px solid var(--border);margin-top:10px;padding-top:10px';
+      const bulkLbl = U().div();
+      bulkLbl.style.cssText = 'font-size:10px;color:#888;margin-bottom:5px';
+      bulkLbl.textContent = lang === 'vi' ? '📋 Nhập nhiều link cùng lúc (mỗi dòng 1 URL):' : '📋 Paste multiple links (one URL per line):';
+      const bulkTA = U().el('textarea');
+      bulkTA.rows = 5;
+      bulkTA.placeholder = 'https://i.ibb.co/xxx/1.png\nhttps://i.ibb.co/xxx/2.png\n...';
+      bulkTA.style.cssText = 'width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:5px;padding:7px;color:var(--text-primary);font-size:10px;font-family:monospace;resize:vertical;line-height:1.7';
+      const bulkBtn = U().mkBtn('btn-primary btn-xs', lang === 'vi' ? '⬇ Import tất cả' : '⬇ Import all', () => {
+        const urls = bulkTA.value.split('\n').map(s => s.trim()).filter(Boolean);
+        if (!urls.length) return;
+        urls.forEach(raw => {
+          const src = raw
+            .replace(/drive\.google\.com\/file\/d\/([^\/\?]+).*/, 'drive.google.com/uc?export=view&id=$1')
+            .replace(/^(?!https?:\/\/)/, 'https://');
+          const obj = {
+            type: src.toLowerCase().includes('.pdf') ? 'pdf' : 'image',
+            name: src.split('/').pop().slice(0, 30),
+            url: src,
+            previewURL: src.toLowerCase().includes('.pdf') ? null : src,
+          };
+          let placed = false;
+          for (let j = 0; j < App.pendingPages.length; j++) {
+            if (!App.pendingPages[j][lang]) { App.pendingPages[j][lang] = obj; placed = true; break; }
+          }
+          if (!placed) {
+            const p = { id: 'p' + Date.now() + Math.random(), vi: null, en: null, note: '' };
+            p[lang] = obj; App.pendingPages.push(p);
+          }
+        });
+        bulkTA.value = '';
+        refreshTable();
+      });
+      bulkBtn.style.cssText = 'margin-top:6px;width:100%';
+      bulkWrap.appendChild(bulkLbl); bulkWrap.appendChild(bulkTA); bulkWrap.appendChild(bulkBtn);
+
+      urlp.appendChild(uh); urlp.appendChild(ul); urlp.appendChild(ab); urlp.appendChild(bulkWrap);
       col.appendChild(urlp); sg.appendChild(col);
     });
     sc.appendChild(sg); return sc;

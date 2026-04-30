@@ -23,12 +23,10 @@ window.DB = (() => {
     const role = window.CURRENT_ROLE || 'user';
 
     let query = sb().from('comics').select('*').order('sort_order');
-    // Admin: thấy tất cả truyện của mình
     // Publisher: chỉ thấy truyện mình tạo
+    // Admin: không lọc — RLS đã cấp toàn quyền, thấy tất cả kể cả publisher
     if (role === 'publisher') {
       query = query.eq('created_by', uid);
-    } else {
-      query = query.eq('user_id', uid);
     }
 
     const comics = await must(query);
@@ -57,7 +55,10 @@ window.DB = (() => {
   /* Ẩn / hiện truyện (đổi status published ↔ draft) */
   async function toggleComicStatus(comicId, newStatus) {
     const uid = Auth.getUserId(); if (!uid) return;
-    await must(sb().from('comics').update({ status: newStatus }).eq('id', comicId).eq('user_id', uid));
+    const role = window.CURRENT_ROLE || 'user';
+    let q = sb().from('comics').update({ status: newStatus }).eq('id', comicId);
+    if (role !== 'admin') q = q.eq('user_id', uid);
+    await must(q);
     const comic = App.comics.find(c => c.id === comicId);
     if (comic) comic.status = newStatus;
   }
@@ -65,8 +66,10 @@ window.DB = (() => {
   /* Xóa truyện hoàn toàn */
   async function deleteComic(comicId) {
     const uid = Auth.getUserId(); if (!uid) return;
-    // cascade: chapters + text_chaps + reading_history + bookmarks
-    await must(sb().from('comics').delete().eq('id', comicId).eq('user_id', uid));
+    const role = window.CURRENT_ROLE || 'user';
+    let q = sb().from('comics').delete().eq('id', comicId);
+    if (role !== 'admin') q = q.eq('user_id', uid);
+    await must(q);
     App.comics = App.comics.filter(c => c.id !== comicId);
   }
 
@@ -100,7 +103,10 @@ window.DB = (() => {
   /* Xóa 1 chapter khỏi DB (cascade xóa text_chap) */
   async function deleteChapter(chapId) {
     const uid = Auth.getUserId(); if (!uid) return;
-    await must(sb().from('chapters').delete().eq('id', chapId).eq('user_id', uid));
+    const role = window.CURRENT_ROLE || 'user';
+    let q = sb().from('chapters').delete().eq('id', chapId);
+    if (role !== 'admin') q = q.eq('user_id', uid);
+    await must(q);
   }
 
   /* ══ IMAGE PAGES ════════════════════════════════════════
