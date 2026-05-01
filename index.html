@@ -154,9 +154,10 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 .chap-modal-box{transform-origin:center top}
 @media(max-width:600px){
   .rtitle{display:none}
-  .zoom-label{display:none}
-  input[type=range].zoom-slider{width:55px}
-  .zoom-val{min-width:26px}
+  .rbar{height:auto;min-height:44px;flex-wrap:wrap;padding:5px 10px;overflow:visible}
+  .zoom-wrap{width:100%;padding:5px 0 2px;border-top:1px solid var(--border);justify-content:center;gap:8px}
+  input[type=range].zoom-slider{flex:1;max-width:160px;width:auto}
+  .zoom-val{min-width:30px;text-align:center}
 }
 
 /* ── Text reader ── */
