@@ -15,20 +15,32 @@ window.ReaderEnhance = (() => {
   function toggleFullscreen() {
     const rd = document.getElementById('reader');
     if (!rd) return;
-    if (!document.fullscreenElement) {
+    _isFullscreen = !_isFullscreen;
+    rd.classList.toggle('fs', _isFullscreen);
+    _syncFsOverlay(rd);
+    // Native fullscreen (enhancement, may fail on iOS)
+    if (_isFullscreen) {
       rd.requestFullscreen?.() || rd.webkitRequestFullscreen?.();
-      _isFullscreen = true;
     } else {
       document.exitFullscreen?.() || document.webkitExitFullscreen?.();
-      _isFullscreen = false;
     }
     updateFsBtn();
   }
 
+  function _syncFsOverlay(rd) {
+    rd.querySelector('.fs-exit')?.remove();
+    if (_isFullscreen) {
+      const btn = document.createElement('button');
+      btn.className = 'fs-exit';
+      btn.textContent = '✕ Thoát';
+      btn.addEventListener('click', toggleFullscreen);
+      rd.appendChild(btn);
+    }
+  }
+
   function updateFsBtn() {
     document.querySelectorAll('[data-fs-btn]').forEach(b => {
-      b.textContent = document.fullscreenElement ? '⛶' : '⛶';
-      b.title = document.fullscreenElement ? 'Thoát toàn màn hình (F)' : 'Toàn màn hình (F)';
+      b.title = _isFullscreen ? 'Thoát toàn màn hình (F)' : 'Toàn màn hình (F)';
     });
   }
 
@@ -136,6 +148,9 @@ window.ReaderEnhance = (() => {
   function init(comicId, chapId) {
     _comicId = comicId; _chapId = chapId;
     if (_isUserPage && window._sb) loadScrollPosition();
+    // Re-apply fs state if still active (chapter navigation mid-fullscreen)
+    const rd = document.getElementById('reader');
+    if (rd) { rd.classList.toggle('fs', _isFullscreen); _syncFsOverlay(rd); }
   }
 
   async function loadScrollPosition() {
@@ -219,10 +234,21 @@ window.ReaderEnhance = (() => {
     }
     clearTimeout(_saveTimer);
     if (document.fullscreenElement) document.exitFullscreen?.();
+    _isFullscreen = false;
+    const rd = document.getElementById('reader');
+    if (rd) rd.classList.remove('fs');
     _comicId = null; _chapId = null;
   }
 
-  document.addEventListener('fullscreenchange', updateFsBtn);
+  document.addEventListener('fullscreenchange', () => {
+    // Nếu browser thoát native fullscreen (ESC), sync lại CSS state
+    if (!document.fullscreenElement && _isFullscreen) {
+      _isFullscreen = false;
+      const rd = document.getElementById('reader');
+      if (rd) { rd.classList.remove('fs'); _syncFsOverlay(rd); }
+    }
+    updateFsBtn();
+  });
 
   return { init, destroy, toggleFullscreen, buildFsBtn, setupKeyboard, setupSwipe, attachScrollSave, attachScrollSaveDelayed };
 })();

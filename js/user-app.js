@@ -636,7 +636,7 @@ async function renderReader() {
 
   /* Comment panel — cuộn cùng với body, sau khi body render xong */
   if (window.Comments && chap && !isText) {
-    const commentWrap = U.div();
+    const commentWrap = U.div('reader-comment-panel');
     commentWrap.style.cssText = 'flex-shrink:0;border-top:1px solid var(--border);max-height:45vh;overflow-y:auto;background:var(--bg-app)';
     const toggleBtn = U.el('button','btn btn-ghost btn-xs');
     toggleBtn.style.cssText='margin:8px 16px;font-size:11px';
