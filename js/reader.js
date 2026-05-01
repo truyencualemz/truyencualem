@@ -5,8 +5,12 @@
 ──────────────────────────────────────────────────────────── */
 window.Reader = (() => {
   let _navDir = 0;
+  let _fsMode = false;
+
+  function toggleFs() { _fsMode = !_fsMode; render(); }
 
   function open(comicId, chapIdx, mode, lang) {
+    _fsMode = false;
     App.rComicId = comicId; App.rChapIdx = chapIdx;
     App.rMode = mode; App.rLang = lang; App.rZoom = 100;
     const rd = document.getElementById('reader');
@@ -75,6 +79,13 @@ window.Reader = (() => {
     });
     [zlbl, slider, zval].forEach(e => zw.appendChild(e));
     bar.appendChild(zw);
+
+    const fsBtn = UI.el('button', 'btn-ghost btn-xs');
+    fsBtn.textContent = '⛶'; fsBtn.title = 'Fullscreen';
+    fsBtn.style.cssText = 'padding:5px 8px;font-size:14px;flex-shrink:0';
+    fsBtn.addEventListener('click', toggleFs);
+    bar.appendChild(fsBtn);
+
     rd.appendChild(bar);
 
     /* chapter nav */
@@ -119,6 +130,18 @@ window.Reader = (() => {
       renderSplitGrid(grid, chap);
     }
     rd.appendChild(body);
+
+    // Fullscreen state
+    if (_fsMode) {
+      rd.classList.add('fs');
+      const exitBtn = document.createElement('button');
+      exitBtn.className = 'fs-exit';
+      exitBtn.textContent = '✕ Thoát';
+      exitBtn.addEventListener('click', toggleFs);
+      rd.appendChild(exitBtn);
+    } else {
+      rd.classList.remove('fs');
+    }
   }
 
   /* ── Zoom ── */

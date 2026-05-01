@@ -41,8 +41,9 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:'Inter',system-ui,s
 #content{flex:1;overflow-y:auto;padding:20px;padding-bottom:max(20px,env(safe-area-inset-bottom,20px))}
 
 /* ── Tabs ── */
-#tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-shrink:0}
-.tab-btn{padding:10px 18px;font-size:12px;cursor:pointer;color:var(--text-muted);border:none;background:transparent;border-bottom:2px solid transparent;font-family:inherit;transition:color .15s;white-space:nowrap}
+#tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+#tabs::-webkit-scrollbar{display:none}
+.tab-btn{padding:10px 16px;font-size:12px;cursor:pointer;color:var(--text-muted);border:none;background:transparent;border-bottom:2px solid transparent;font-family:inherit;transition:color .15s;white-space:nowrap;flex-shrink:0}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
 .tab-btn:hover{color:var(--text-primary)}
 
@@ -152,6 +153,11 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 .anim-slide-ltr{animation:slide-ltr .2s cubic-bezier(.22,1,.36,1) both}
 .anim-slide-rtl{animation:slide-rtl .2s cubic-bezier(.22,1,.36,1) both}
 .chap-modal-box{transform-origin:center top}
+/* ── Fullscreen reader ── */
+#reader.fs .rbar{display:none!important}
+#reader.fs .rnav{display:none!important}
+.fs-exit{position:fixed;bottom:max(24px,env(safe-area-inset-bottom,24px));right:16px;z-index:210;padding:7px 13px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:rgba(255,255,255,.45);font-size:11px;font-family:monospace;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:opacity .2s,color .2s;outline:none;opacity:1}
+.fs-exit:hover,.fs-exit:active{color:rgba(255,255,255,.9);background:rgba(0,0,0,.7)}
 @media(max-width:600px){
   .rtitle{display:none}
   .rbar{height:auto;min-height:44px;flex-wrap:wrap;padding:5px 10px;overflow:visible}
