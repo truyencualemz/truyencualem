@@ -144,6 +144,19 @@ window.ReaderEnhance = (() => {
     _swipe = { el: rd, onStart, onMove, onEnd };
   }
 
+  /* ══ DOUBLE-TAP ZOOM ════════════════════════════════ */
+  function setupDoubleTap(el, onDoubleTap) {
+    let lastTap = 0;
+    el.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTap < 300 && e.changedTouches.length === 1) {
+        e.preventDefault();
+        onDoubleTap(e.changedTouches[0]);
+      }
+      lastTap = now;
+    }, { passive: false });
+  }
+
   /* ══ SCROLL POSITION SYNC ════════════════════════════ */
   function init(comicId, chapId) {
     _comicId = comicId; _chapId = chapId;
@@ -250,5 +263,5 @@ window.ReaderEnhance = (() => {
     updateFsBtn();
   });
 
-  return { init, destroy, toggleFullscreen, buildFsBtn, setupKeyboard, setupSwipe, attachScrollSave, attachScrollSaveDelayed };
+  return { init, destroy, toggleFullscreen, buildFsBtn, setupKeyboard, setupSwipe, setupDoubleTap, attachScrollSave, attachScrollSaveDelayed };
 })();

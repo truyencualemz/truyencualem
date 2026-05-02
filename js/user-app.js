@@ -24,6 +24,14 @@ function fmtDate(iso) {
   return Math.floor(diff/1440)+'d trước';
 }
 
+function markChapRead(comicId,chapId){
+  const k=`rc_${comicId}`,a=JSON.parse(localStorage.getItem(k)||'[]');
+  if(!a.includes(chapId)){a.push(chapId);localStorage.setItem(k,JSON.stringify(a));}
+}
+function getReadChaps(comicId){
+  return new Set(JSON.parse(localStorage.getItem(`rc_${comicId}`)||'[]'));
+}
+
 /* ── Tab routing ── */
 let activeTab = 'home';
 let allComics = [];
@@ -273,14 +281,17 @@ async function openChapModal(comic) {
   }
 
   // Chapter list
+  const readSet = getReadChaps(comic.id);
   const list = U.div('chap-modal-list');
   (comic.chapters||[]).forEach((ch,idx) => {
     const isLast = history?.chap_id===ch.id;
-    const item = U.div('chap-item'+(isLast?' last-read':''));
+    const isRead = readSet.has(ch.id);
+    const item = U.div('chap-item'+(isLast?' last-read':'')+(isRead?' chap-read':''));
     item.innerHTML = `<span class="chap-num">Ch.${ch.num}</span>
 <span class="chap-title">${U.esc(ch.title||'Chương '+ch.num)}</span>
 <span class="chap-type">${ch.type==='text'?'Chữ':'Ảnh'}</span>`;
     if (isLast) item.innerHTML += `<span style="font-size:9px;color:var(--accent);margin-left:6px">← đang đọc</span>`;
+    else if (isRead) { const m=U.el('span','chap-read-mark'); m.textContent='✓'; item.appendChild(m); }
     item.addEventListener('click', () => { modal.style.display='none'; openReader(comic, idx); });
     list.appendChild(item);
   });
@@ -515,6 +526,7 @@ async function openReader(comic, chapIdx) {
   }
 
   await UserDB.saveHistory(comic.id, chap);
+  markChapRead(comic.id, chap.id);
 
   const rd = document.getElementById('reader');
   rd.innerHTML = ''; rd.style.display = 'flex'; rd.style.flexDirection = 'column';
@@ -613,8 +625,17 @@ async function renderReader() {
     if(rChapIdx<chaps.length-1){ rChapIdx++; await openReader(rComic, rChapIdx); }
   });
   nb.disabled=rChapIdx>=chaps.length-1;
-  [pb,ni,nb].forEach(x=>nav.appendChild(x));
+  const sel=U.el('select','rchap-select');
+  chaps.forEach((ch,idx)=>{
+    const opt=U.el('option'); opt.value=String(idx);
+    opt.textContent=`Ch.${ch.num}: ${ch.title||''}`;
+    if(idx===rChapIdx) opt.selected=true;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change',async()=>{ if(+sel.value!==rChapIdx) await openReader(rComic,+sel.value); });
+  [pb,ni,sel,nb].forEach(x=>nav.appendChild(x));
   rd.appendChild(nav);
+  const progress=U.div('read-progress'); rd.appendChild(progress);
 
   /* Body */
   const body = U.div(); body.style.cssText='display:flex;flex:1;overflow:hidden;flex-direction:column';
@@ -679,6 +700,16 @@ async function renderReader() {
       } else {
         ReaderEnhance.attachScrollSave(mainScroll);
       }
+      if (!isText) ReaderEnhance.setupDoubleTap(mainScroll, () => {
+        rZoom = rZoom >= 150 ? 100 : 150; applyZoom(rZoom);
+        const sld=document.querySelector('#reader .zoom-slider');
+        if(sld){sld.value=rZoom;sld.style.setProperty('--p',((rZoom-30)/170*100)+'%');}
+        const zv=document.querySelector('#reader .zoom-val'); if(zv) zv.textContent=rZoom+'%';
+      });
+      mainScroll.addEventListener('scroll',()=>{
+        const max=mainScroll.scrollHeight-mainScroll.clientHeight;
+        if(max>0) progress.style.width=Math.min(100,mainScroll.scrollTop/max*100)+'%';
+      },{passive:true});
     }
   }
 }
@@ -694,6 +725,7 @@ function applyZoom(zoom) {
   rZoom=zoom;
   document.querySelectorAll('#reader .rpiw').forEach(w=>{w.style.width=zoom+'%';w.style.maxWidth='none';});
   document.querySelectorAll('#reader .split-page > img, #reader .split-page > .pdf-pages').forEach(e=>{e.style.width=zoom+'%';e.style.maxWidth='none';});
+  document.querySelectorAll('#reader [data-split-img]').forEach(e=>{e.style.width=zoom+'%';e.style.maxWidth='none';});
 }
 
 async function loadSingleImages(container, chap, lang) {
@@ -705,15 +737,35 @@ async function loadSingleImages(container, chap, lang) {
     container.appendChild(ph);
     return;
   }
+
+  const obs = window.IntersectionObserver ? new IntersectionObserver((entries, ob) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      ob.unobserve(e.target);
+      e.target._load?.();
+    });
+  }, { rootMargin: '400px 0px' }) : null;
+
   for(let i=0;i<pages.length;i++){
     const p=pages[i];
     const lbl=U.div('rpl'); lbl.textContent=`Trang ${i+1}${p.note?' · '+p.note:''}`; container.appendChild(lbl);
     const d=p[lang]; if(!d){const ph=U.div('rnoph');ph.textContent=`[bản ${lang.toUpperCase()} chưa có]`;container.appendChild(ph);continue;}
     const ws=rZoom!==100?rZoom+'%':null;
     const w=U.div('rpiw'); if(ws){w.style.width=ws;w.style.maxWidth='none';}
-    const pageEl=await PDFModule.buildPageEl(d,chap.id,p.id,lang,ws);
-    if(pageEl){w.appendChild(pageEl);container.appendChild(w);}
-    else{const ph=U.div('rnoph');ph.textContent='[lỗi tải trang]';container.appendChild(ph);}
+    w.style.minHeight='120px'; // giữ không gian để IntersectionObserver hoạt động
+    const spin=U.div('pdf-spin'); spin.textContent=' '; w.appendChild(spin);
+
+    const doLoad=async()=>{
+      const pageEl=await PDFModule.buildPageEl(d,chap.id,p.id,lang,ws);
+      if(w.contains(spin)) w.removeChild(spin);
+      w.style.minHeight='';
+      if(pageEl){w.appendChild(pageEl);}
+      else{const ph=U.div('rnoph');ph.textContent='[lỗi tải trang]';w.appendChild(ph);}
+    };
+
+    if(obs){ w._load=doLoad; obs.observe(w); }
+    else { await doLoad(); }
+    container.appendChild(w);
   }
 }
 
@@ -780,6 +832,7 @@ function renderSplitGrid(container, chap) {
           if (cell.contains(spin)) cell.removeChild(spin);
           if (el) {
             el.style.cssText = 'width:100%;height:auto;display:block';
+            el.dataset.splitImg = '1';
             cell.appendChild(el);
           } else {
             const ph = U.div('spno'); ph.textContent = '[lỗi]'; cell.appendChild(ph);
