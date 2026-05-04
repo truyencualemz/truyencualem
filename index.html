@@ -171,6 +171,17 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
   .zoom-val{min-width:30px;text-align:center}
 }
 
+/* ── Ebook viewers (EPUB / FB2 / CBZ) ── */
+.epub-viewer,.fb2-viewer{padding:0 4px;max-width:720px;margin:0 auto}
+.epub-section{padding:14px 0;border-bottom:1px solid var(--border);color:var(--reader-text);font-size:15px;line-height:1.9;font-family:Georgia,serif;word-break:break-word}
+.epub-section:last-child{border-bottom:none}
+.epub-section h1,.epub-section h2,.epub-section h3,.epub-section h4{color:var(--accent);margin:12px 0 6px;font-family:monospace}
+.epub-section p{margin-bottom:8px}
+.epub-section img{max-width:100%;height:auto;display:block;margin:8px auto}
+.ebook-title{font-size:18px;color:var(--accent);margin:12px 0 4px;font-family:monospace}
+.ebook-author{font-size:12px;color:var(--text-muted);margin-bottom:14px;font-style:italic}
+.ebook-chap-title{font-size:14px;font-weight:600;color:var(--accent);margin-bottom:10px;font-family:monospace}
+
 /* ── Text reader ── */
 .tbar-langs{padding:7px 14px;background:var(--bg-secondary);border-bottom:1px solid var(--bg-tertiary);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
 .lang-pill{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:11px;user-select:none;transition:border-color .15s;flex-shrink:0;color:var(--text-muted)}
@@ -250,6 +261,7 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 <div id="loading"><div class="spinner"></div><div class="loading-msg" id="loading-msg">Đang tải...</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
   pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -262,6 +274,7 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 <script src="js/db.js"></script>
 <script src="js/translate.js"></script>
 <script src="js/pdf-module.js"></script>
+<script src="js/ebook-module.js"></script>
 <script src="js/user-db.js"></script>
 <script src="js/announce.js"></script>
 <script src="js/infinite-scroll.js"></script>

@@ -5,6 +5,15 @@
 window.AdminForm = (() => {
   const U = () => window.UI;
 
+  function detectType(url) {
+    const s = url.toLowerCase().split('?')[0];
+    if (s.endsWith('.pdf'))  return 'pdf';
+    if (s.endsWith('.epub')) return 'epub';
+    if (s.endsWith('.cbz') || s.endsWith('.cbr')) return 'cbz';
+    if (s.endsWith('.fb2'))  return 'fb2';
+    return 'image';
+  }
+
   /* ── Pages table ──────────────────────────────────────── */
   function buildPagesCard() {
     const card = U().div('fc'); card.id = 'pages-card';
@@ -180,7 +189,8 @@ window.AdminForm = (() => {
       // normalize Google Drive share link
       const src = raw.replace(/drive\.google\.com\/file\/d\/([^\/\?]+).*/, 'drive.google.com/uc?export=view&id=$1')
                      .replace(/^(?!https?:\/\/)/, 'https://');
-      const obj = { type: src.toLowerCase().includes('.pdf') ? 'pdf' : 'image', name: src.split('/').pop().slice(0, 30), url: src, previewURL: src.includes('.pdf') ? null : src };
+      const _t = detectType(src);
+      const obj = { type: _t, name: src.split('/').pop().slice(0, 30), url: src, previewURL: _t === 'image' ? src : null };
       let placed = false;
       for (let j = 0; j < App.pendingPages.length; j++) {
         if (!App.pendingPages[j][lang]) { App.pendingPages[j][lang] = obj; placed = true; break; }
@@ -263,11 +273,12 @@ window.AdminForm = (() => {
           const src = raw
             .replace(/drive\.google\.com\/file\/d\/([^\/\?]+).*/, 'drive.google.com/uc?export=view&id=$1')
             .replace(/^(?!https?:\/\/)/, 'https://');
+          const _t2 = detectType(src);
           const obj = {
-            type: src.toLowerCase().includes('.pdf') ? 'pdf' : 'image',
+            type: _t2,
             name: src.split('/').pop().slice(0, 30),
             url: src,
-            previewURL: src.toLowerCase().includes('.pdf') ? null : src,
+            previewURL: _t2 === 'image' ? src : null,
           };
           let placed = false;
           for (let j = 0; j < App.pendingPages.length; j++) {

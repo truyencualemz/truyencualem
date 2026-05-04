@@ -220,6 +220,32 @@ window.PDFModule = (() => {
       return wrapper;
     }
 
+    // ── CBZ / EPUB / FB2 ─────────────────────────────
+    if (['cbz', 'epub', 'fb2'].includes(d.type)) {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = `width:${ws};max-width:none`;
+      const spin = document.createElement('div');
+      spin.className = 'pdf-spin';
+      spin.textContent = ` Đang mở ${d.type.toUpperCase()}...`;
+      wrap.appendChild(spin);
+      (async () => {
+        try {
+          if (!window.EbookModule) throw new Error('EbookModule chưa tải');
+          let el;
+          if (d.type === 'cbz')       el = await EbookModule.buildCBZEl(d.url, ws);
+          else if (d.type === 'epub') el = await EbookModule.buildEPUBEl(d.url);
+          else if (d.type === 'fb2')  el = await EbookModule.buildFB2El(d.url);
+          if (wrap.contains(spin)) wrap.removeChild(spin);
+          if (el) wrap.appendChild(el);
+        } catch (e) {
+          spin.className = '';
+          spin.style.cssText = 'padding:12px;font-size:10px;color:#e05555;white-space:pre-wrap';
+          spin.textContent = `[Lỗi ${d.type.toUpperCase()}: ${e.message}]`;
+        }
+      })();
+      return wrap;
+    }
+
     return null;
   }
 
