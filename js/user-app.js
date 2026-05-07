@@ -851,10 +851,6 @@ function renderSplitGrid(container, chap) {
 }
 
 /* ── TTS helpers ── */
-function getTTSLang() {
-  return rTextSelLangs[0] || null;
-}
-
 function highlightTSeg(idx) {
   document.querySelectorAll('#reader .tts-word-active').forEach(el => el.classList.remove('tts-word-active'));
   document.querySelectorAll('#reader .tseg').forEach(el => {
@@ -866,10 +862,13 @@ function highlightTSeg(idx) {
   }
 }
 
-function highlightWord(segIdx, charIndex) {
+function highlightWord(segIdx, charIndex, lang) {
   document.querySelectorAll('#reader .tts-word-active').forEach(el => el.classList.remove('tts-word-active'));
+  const scope = lang
+    ? `#reader .text-col[data-lang="${lang}"] .tseg[data-idx="${segIdx}"]`
+    : `#reader .tseg[data-idx="${segIdx}"]`;
   let best = null;
-  document.querySelectorAll(`#reader .tseg[data-idx="${segIdx}"] .tts-word`).forEach(el => {
+  document.querySelectorAll(scope + ' .tts-word').forEach(el => {
     if (+el.dataset.w <= charIndex) best = el;
   });
   best?.classList.add('tts-word-active');
@@ -935,10 +934,22 @@ function buildTextLangBar(){
   if (window.TTS) {
     const ttsBar = U.div('tts-bar');
 
+    // Chọn ngôn ngữ đọc
+    const langSel = U.el('select','tts-speed');
+    langSel.title = 'Ngôn ngữ đọc';
+    allLangs.forEach(l => {
+      const o=U.el('option'); o.value=l;
+      const meta=Translate.getLangMeta(l);
+      o.textContent=meta.flag+' '+meta.label;
+      langSel.appendChild(o);
+    });
+    langSel.value = allLangs.find(l=>l!=='vi') || allLangs[0] || '';
+
+    // Chọn giọng đọc (lọc theo ngôn ngữ đang chọn)
     const voiceSel = U.el('select','tts-speed');
     voiceSel.title='Giọng đọc'; voiceSel.style.maxWidth='130px'; voiceSel.style.display='none';
-    function populateVoices() {
-      const lang = getTTSLang(); if (!lang) return;
+    function populateVoices(lang) {
+      if (!lang) return;
       const voices = TTS.getVoicesForLang(lang);
       voiceSel.innerHTML = '';
       if (!voices.length) { voiceSel.style.display='none'; return; }
@@ -950,9 +961,10 @@ function buildTextLangBar(){
       });
       TTS.setVoice(voices[0].voiceURI);
     }
-    populateVoices();
-    if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = populateVoices;
-    voiceSel.addEventListener('change',()=>TTS.setVoice(voiceSel.value));
+    populateVoices(langSel.value);
+    if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = ()=>populateVoices(langSel.value);
+    langSel.addEventListener('change', ()=>{ populateVoices(langSel.value); });
+    voiceSel.addEventListener('change', ()=>TTS.setVoice(voiceSel.value));
 
     const speedSel = U.el('select','tts-speed');
     [[0.75,'0.75×'],[1,'1×'],[1.25,'1.25×'],[1.5,'1.5×'],[2,'2×']].forEach(([v,l])=>{
@@ -961,7 +973,7 @@ function buildTextLangBar(){
     speedSel.addEventListener('change',()=>TTS.setRate(+speedSel.value));
 
     const playBtn = U.btn('btn-ghost btn-sm','▶ Đọc',()=>{
-      const lang=getTTSLang();
+      const lang=langSel.value;
       if(!lang){return;}
       if(TTS.isPlaying()){
         TTS.stop();
@@ -971,12 +983,13 @@ function buildTextLangBar(){
         TTS.readAll(segs,0,{
           onSegment:(idx)=>{ highlightTSeg(idx); },
           onDone:()=>{ highlightTSeg(-1); playBtn.textContent='▶ Đọc'; },
-          onWord:(segIdx,charIndex)=>{ highlightWord(segIdx,charIndex); },
+          onWord:(segIdx,charIndex)=>{ highlightWord(segIdx,charIndex,lang); },
         });
         playBtn.textContent='⏸ Dừng';
       }
     });
 
+    ttsBar.appendChild(langSel);
     ttsBar.appendChild(voiceSel);
     ttsBar.appendChild(speedSel);
     ttsBar.appendChild(playBtn);
@@ -1017,7 +1030,7 @@ function renderTextSegs(container,lang){
         const text=seg.content?.[lang]||'';
         if(!text.trim())return;
         highlightTSeg(i);
-        TTS.speakSegment(text,lang,()=>highlightTSeg(-1),(ci)=>highlightWord(i,ci));
+        TTS.speakSegment(text,lang,()=>highlightTSeg(-1),(ci)=>highlightWord(i,ci,lang));
       });
       hdr.appendChild(ttsBtn);
     }
