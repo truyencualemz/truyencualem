@@ -8,7 +8,7 @@ window.TTS = (() => {
   const synth = window.speechSynthesis;
 
   const LANG_BCP47 = {
-    en: 'en', ja: 'ja', zh: 'zh',
+    vi: 'vi', en: 'en', ja: 'ja', zh: 'zh',
     ko: 'ko', fr: 'fr', de: 'de', es: 'es',
   };
 

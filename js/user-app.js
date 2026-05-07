@@ -852,7 +852,7 @@ function renderSplitGrid(container, chap) {
 
 /* ── TTS helpers ── */
 function getTTSLang() {
-  return rTextSelLangs.find(l => l !== 'vi') || null;
+  return rTextSelLangs[0] || null;
 }
 
 function highlightTSeg(idx) {
@@ -1009,7 +1009,7 @@ function renderTextSegs(container,lang){
     const wrap=U.div('tseg');wrap.dataset.idx=i;
     const hdr=U.div('tseg-hdr');
     if(seg.note){const n=U.div('tseg-note');n.textContent=seg.note;hdr.appendChild(n);}
-    if(window.TTS && lang!=='vi'){
+    if(window.TTS){
       const ttsBtn=U.el('button','tts-seg-btn');
       ttsBtn.textContent='🔊';ttsBtn.title='Đọc đoạn này';
       ttsBtn.addEventListener('click',(e)=>{
@@ -1026,7 +1026,7 @@ function renderTextSegs(container,lang){
     const content=seg.content?.[lang];
     if(content){textEl.appendChild(annotateTextUser(content,seg.annotations||[],lang,allOther));}
     else{textEl.style.color='var(--text-muted)';textEl.textContent=`[Chưa có bản ${Translate.getLangLabel(lang)}]`;}
-    if(window.TTS && lang!=='vi' && content) wrapWords(textEl);
+    if(window.TTS && content) wrapWords(textEl);
     wrap.appendChild(textEl);container.appendChild(wrap);
   });
 }
