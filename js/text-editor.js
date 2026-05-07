@@ -124,6 +124,17 @@ window.TextEditor = (() => {
     chapData.segments.forEach((seg, idx) => {
       wrap.appendChild(buildSegmentCard(seg, idx));
     });
+
+    const addBtnBottom = UI.mkBtn('btn-ghost btn-sm', '+ Thêm đoạn', () => {
+      chapData.segments.push(makeSegment());
+      const old = document.getElementById('segs-section');
+      if (old) {
+        old.parentNode.replaceChild(buildSegmentsSection(), old);
+        document.getElementById('segs-section')?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      }
+    });
+    addBtnBottom.style.cssText = 'width:100%;margin-top:10px';
+    wrap.appendChild(addBtnBottom);
     return wrap;
   }
 
