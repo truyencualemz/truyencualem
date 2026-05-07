@@ -206,6 +206,13 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 .lt{font-size:9px;font-family:monospace;padding:1px 5px;border-radius:3px;display:inline-block}
 .lvi{background:#1a2030;color:#6ab0f5;border:1px solid #2a3050}
 .len{background:#1a2820;color:#6af59a;border:1px solid #2a4030}
+.tts-active{background:rgba(200,169,110,.13);border-radius:6px;padding:0 6px;margin:0 -6px;transition:background .2s}
+.tts-seg-btn{background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-muted);padding:1px 4px;border-radius:3px;line-height:1;opacity:.4;transition:opacity .15s;flex-shrink:0;align-self:flex-start;margin-top:2px}
+.tseg:hover .tts-seg-btn,.tts-seg-btn:focus{opacity:.9;color:var(--accent)}
+.tts-bar{display:flex;align-items:center;gap:6px;margin-left:auto;border-left:1px solid var(--border);padding-left:10px;flex-shrink:0}
+.tts-speed{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-primary);border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;font-family:inherit}
+.tseg-hdr{display:flex;align-items:flex-start;gap:6px}
+.tseg-hdr .tseg-note{flex:1}
 
 /* ── Chapter modal ── */
 #chap-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
@@ -280,6 +287,7 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 <script src="js/infinite-scroll.js"></script>
 <script src="js/follow.js"></script>
 <script src="js/reader-enhance.js"></script>
+<script src="js/tts.js"></script>
 <script src="js/user-app.js"></script>
 <script src="js/comments.js"></script>
 <script src="js/donate.js"></script>

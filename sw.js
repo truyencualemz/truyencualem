@@ -2,7 +2,7 @@
    Cache-first cho static assets, network-only cho Supabase.
    Bump CACHE_NAME khi deploy để force update.
 ──────────────────────────────────────────────────────────── */
-const CACHE_NAME = 'lemcomics-v9';
+const CACHE_NAME = 'lemcomics-v10';
 
 const PRECACHE = [
   './index.html',
@@ -17,6 +17,7 @@ const PRECACHE = [
   './js/infinite-scroll.js',
   './js/follow.js',
   './js/reader-enhance.js',
+  './js/tts.js',
   './js/ebook-module.js',
   './js/user-app.js',
   './js/comments.js',

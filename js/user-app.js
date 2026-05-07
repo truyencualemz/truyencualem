@@ -506,6 +506,7 @@ async function openReader(comic, chapIdx) {
   _readerOpening = true;
   try {
     // Luôn load mode/lang từ localStorage — đảm bảo đúng preference dù đóng/mở lại
+    window.TTS?.stop();
     rComic   = comic;
     rChapIdx = chapIdx;
     rMode    = localStorage.getItem('md_rmode') || 'single';
@@ -849,6 +850,21 @@ function renderSplitGrid(container, chap) {
   container.appendChild(inner);
 }
 
+/* ── TTS helpers ── */
+function getTTSLang() {
+  return rTextSelLangs.find(l => l !== 'vi') || null;
+}
+
+function highlightTSeg(idx) {
+  document.querySelectorAll('#reader .tseg').forEach(el => {
+    el.classList.toggle('tts-active', +el.dataset.idx === idx);
+  });
+  if (idx >= 0) {
+    const target = document.querySelector(`#reader .text-col .tseg[data-idx="${idx}"]`);
+    target?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
 /* ── Text chapter reader ── */
 function buildTextLangBar(){
   const allLangs=rTextData?.languages||[];
@@ -868,6 +884,37 @@ function buildTextLangBar(){
     pill.appendChild(cb);pill.appendChild(document.createTextNode(' '+meta.flag+' '+meta.label));
     bar.appendChild(pill);
   });
+
+  if (window.TTS) {
+    const ttsBar = U.div('tts-bar');
+
+    const speedSel = U.el('select','tts-speed');
+    [[0.75,'0.75×'],[1,'1×'],[1.25,'1.25×'],[1.5,'1.5×'],[2,'2×']].forEach(([v,l])=>{
+      const o=U.el('option');o.value=String(v);o.textContent=l;if(v===1)o.selected=true;speedSel.appendChild(o);
+    });
+    speedSel.addEventListener('change',()=>TTS.setRate(+speedSel.value));
+
+    const playBtn = U.btn('btn-ghost btn-sm','▶ Đọc',()=>{
+      const lang=getTTSLang();
+      if(!lang){return;}
+      if(TTS.isPlaying()){
+        TTS.stop();
+        playBtn.textContent='▶ Đọc';
+      } else {
+        const segs=(rTextData?.segments||[]).map(seg=>({text:seg.content?.[lang]||'',lang}));
+        TTS.readAll(segs,0,{
+          onSegment:(idx)=>{ highlightTSeg(idx); },
+          onDone:()=>{ highlightTSeg(-1); playBtn.textContent='▶ Đọc'; },
+        });
+        playBtn.textContent='⏸ Dừng';
+      }
+    });
+
+    ttsBar.appendChild(speedSel);
+    ttsBar.appendChild(playBtn);
+    bar.appendChild(ttsBar);
+  }
+
   return bar;
 }
 
@@ -892,7 +939,21 @@ function renderTextSegs(container,lang){
   const allOther=(rTextData?.languages||[]).filter(l=>l!==lang);
   segs.forEach((seg,i)=>{
     const wrap=U.div('tseg');wrap.dataset.idx=i;
-    if(seg.note){const n=U.div('tseg-note');n.textContent=seg.note;wrap.appendChild(n);}
+    const hdr=U.div('tseg-hdr');
+    if(seg.note){const n=U.div('tseg-note');n.textContent=seg.note;hdr.appendChild(n);}
+    if(window.TTS && lang!=='vi'){
+      const ttsBtn=U.el('button','tts-seg-btn');
+      ttsBtn.textContent='🔊';ttsBtn.title='Đọc đoạn này';
+      ttsBtn.addEventListener('click',(e)=>{
+        e.stopPropagation();
+        const text=seg.content?.[lang]||'';
+        if(!text.trim())return;
+        highlightTSeg(i);
+        TTS.speakSegment(text,lang,()=>highlightTSeg(-1));
+      });
+      hdr.appendChild(ttsBtn);
+    }
+    if(hdr.children.length)wrap.appendChild(hdr);
     const textEl=U.div('tseg-content');
     const content=seg.content?.[lang];
     if(content){textEl.appendChild(annotateTextUser(content,seg.annotations||[],lang,allOther));}
