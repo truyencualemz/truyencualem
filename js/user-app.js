@@ -609,7 +609,7 @@ async function renderReader() {
     const sld=U.el('input'); sld.type='range';sld.className='zoom-slider';sld.min=12;sld.max=22;sld.step=1;sld.value=15;
     sld.style.setProperty('--p','20%');
     const zv=U.div('zoom-val'); zv.textContent='15px';
-    sld.addEventListener('input',()=>{const v=+sld.value;sld.style.setProperty('--p',((v-12)/10*100)+'%');zv.textContent=v+'px';document.querySelectorAll('#reader .tseg-content').forEach(e=>e.style.fontSize=v+'px');syncSegHeights();});
+    sld.addEventListener('input',()=>{const v=+sld.value;sld.style.setProperty('--p',((v-12)/10*100)+'%');zv.textContent=v+'px';document.querySelectorAll('#reader .tseg-content').forEach(e=>e.style.fontSize=v+'px');});
     [zlbl,sld,zv].forEach(e=>zw.appendChild(e)); bar.appendChild(zw);
   }
   rd.appendChild(bar);
@@ -857,7 +857,7 @@ function highlightTSeg(idx) {
     el.classList.toggle('tts-active', +el.dataset.idx === idx);
   });
   if (idx >= 0) {
-    const target = document.querySelector(`#reader .text-col .tseg[data-idx="${idx}"]`);
+    const target = document.querySelector(`#reader .tseg[data-idx="${idx}"]`);
     target?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 }
@@ -865,7 +865,7 @@ function highlightTSeg(idx) {
 function highlightWord(segIdx, charIndex, lang) {
   document.querySelectorAll('#reader .tts-word-active').forEach(el => el.classList.remove('tts-word-active'));
   const scope = lang
-    ? `#reader .text-col[data-lang="${lang}"] .tseg[data-idx="${segIdx}"]`
+    ? `#reader .tseg[data-lang="${lang}"][data-idx="${segIdx}"]`
     : `#reader .tseg[data-idx="${segIdx}"]`;
   let best = null;
   document.querySelectorAll(scope + ' .tts-word').forEach(el => {
@@ -1001,18 +1001,58 @@ function buildTextLangBar(){
 
 function buildTextCols(){
   const n=Math.max(1,rTextSelLangs.length);
-  const wrap=U.div();wrap.id='text-cols';wrap.style.cssText=`flex:1;display:grid;grid-template-columns:repeat(${n},1fr);overflow:hidden`;
-  const scrollEls=[];
+  const grid=U.div();grid.id='text-cols';
+  grid.style.cssText=`flex:1;display:grid;grid-template-columns:repeat(${n},1fr);overflow-y:auto;overflow-x:hidden`;
+
+  // Sticky headers
   rTextSelLangs.forEach((lang,i)=>{
-    const col=U.div('text-col-wrap');if(i===n-1)col.style.borderRight='none';
-    const hdr=U.div('text-col-hdr');const meta=Translate.getLangMeta(lang);
+    const hdr=U.div('text-col-hdr');
+    const meta=Translate.getLangMeta(lang);
     hdr.innerHTML=`<span style="font-size:15px">${meta.flag}</span><span style="color:var(--text-secondary);font-size:11px">${meta.label}</span>`;
-    col.appendChild(hdr);
-    const scroll=U.div('text-col');scroll.dataset.lang=lang;
-    renderTextSegs(scroll,lang);scrollEls.push(scroll);col.appendChild(scroll);wrap.appendChild(col);
+    if(i<n-1)hdr.style.borderRight='1px solid var(--border)';
+    grid.appendChild(hdr);
   });
-  setTimeout(()=>{ setupTextSync(scrollEls); syncSegHeights(); },200);
-  return wrap;
+
+  // Flat segment cells — CSS Grid tự căn chiều cao cùng hàng
+  const segs=rTextData?.segments||[];
+  segs.forEach((seg,idx)=>{
+    rTextSelLangs.forEach((lang,colIdx)=>{
+      const cell=U.div('tseg');
+      cell.dataset.idx=idx; cell.dataset.lang=lang;
+      cell.style.cssText=`padding:14px 22px${colIdx<n-1?';border-right:1px solid var(--border)':''}`;
+
+      const allOther=(rTextData?.languages||[]).filter(l=>l!==lang);
+      const hdr=U.div('tseg-hdr');
+      if(seg.note){const nt=U.div('tseg-note');nt.textContent=seg.note;hdr.appendChild(nt);}
+      if(window.TTS){
+        const ttsBtn=U.el('button','tts-seg-btn');
+        ttsBtn.textContent='🔊';ttsBtn.title='Đọc đoạn này';
+        ttsBtn.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          const text=seg.content?.[lang]||'';
+          if(!text.trim())return;
+          highlightTSeg(idx);
+          TTS.speakSegment(text,lang,()=>highlightTSeg(-1),(ci)=>highlightWord(idx,ci,lang));
+        });
+        hdr.appendChild(ttsBtn);
+      }
+      if(hdr.children.length)cell.appendChild(hdr);
+
+      const textEl=U.div('tseg-content');
+      const content=seg.content?.[lang];
+      if(content){
+        textEl.appendChild(annotateTextUser(content,seg.annotations||[],lang,allOther));
+        if(window.TTS)wrapWords(textEl);
+      } else {
+        textEl.style.color='var(--text-muted)';
+        textEl.textContent=`[Chưa có bản ${Translate.getLangLabel(lang)}]`;
+      }
+      cell.appendChild(textEl);
+      grid.appendChild(cell);
+    });
+  });
+
+  return grid;
 }
 
 function renderTextSegs(container,lang){

@@ -187,13 +187,9 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 .lang-pill{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:11px;user-select:none;transition:border-color .15s;flex-shrink:0;color:var(--text-muted)}
 .lang-pill:has(input:checked){border-color:var(--accent)}
 .lang-pill input{accent-color:var(--accent)}
-#text-cols{flex:1;display:grid;overflow:hidden}
-.text-col-wrap{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
-.text-col-wrap:last-child{border-right:none}
-.text-col-hdr{padding:7px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border);font-size:11px;display:flex;align-items:center;gap:6px;flex-shrink:0;color:var(--text-secondary)}
-.text-col{flex:1;overflow-y:auto;padding:18px 22px;background:var(--bg-app)}
-.tseg{padding:14px 0;border-bottom:1px solid var(--border)}
-.tseg:last-child{border-bottom:none}
+#text-cols{flex:1;display:grid;overflow-y:auto;overflow-x:hidden}
+.text-col-hdr{padding:7px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border);font-size:11px;display:flex;align-items:center;gap:6px;color:var(--text-secondary);position:sticky;top:0;z-index:10}
+.tseg{border-bottom:1px solid var(--border);background:var(--bg-app)}
 .tseg-note{font-size:10px;color:var(--text-muted);font-style:italic;margin-bottom:5px}
 .tseg-content{font-size:15px;line-height:1.9;color:var(--reader-text);white-space:pre-wrap;word-break:break-word}
 .anno-phrase{cursor:pointer;border-bottom:1.5px dashed var(--accent-dim);border-radius:2px;transition:background .12s}
@@ -206,7 +202,7 @@ input[type=range].zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;widt
 .lt{font-size:9px;font-family:monospace;padding:1px 5px;border-radius:3px;display:inline-block}
 .lvi{background:#1a2030;color:#6ab0f5;border:1px solid #2a3050}
 .len{background:#1a2820;color:#6af59a;border:1px solid #2a4030}
-.tts-active{background:rgba(200,169,110,.1);border-radius:6px;padding:0 6px;margin:0 -6px;transition:background .2s}
+.tts-active{background:rgba(200,169,110,.12)!important;transition:background .2s}
 .tts-word{border-radius:2px;transition:background .1s}
 .tts-word-active{background:rgba(200,169,110,.5);border-radius:2px}
 .tts-seg-btn{background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-muted);padding:1px 4px;border-radius:3px;line-height:1;opacity:.4;transition:opacity .15s;flex-shrink:0;align-self:flex-start;margin-top:2px}
