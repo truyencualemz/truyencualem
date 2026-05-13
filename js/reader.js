@@ -4,7 +4,7 @@
    luôn khớp trang N EN, không drift dù chiều cao khác nhau.
 ──────────────────────────────────────────────────────────── */
 window.Reader = (() => {
-  let _navDir = 0;
+  let _navDir = 0, _navLocked = false;
   let _fsMode = false;
 
   function toggleFs() { _fsMode = !_fsMode; render(); }
@@ -19,6 +19,24 @@ window.Reader = (() => {
     rd.classList.remove('anim-slide-up'); void rd.offsetWidth; rd.classList.add('anim-slide-up');
     render();
     PDFModule.prefetch(comicId, chapIdx);
+  }
+
+  function navigate(newIdx) {
+    if (_navLocked) return;
+    const chaps = (App.comics.find(c => c.id === App.rComicId)?.chapters) || [];
+    if (newIdx < 0 || newIdx >= chaps.length) return;
+    const dir = Math.sign(newIdx - App.rChapIdx);
+    _navDir = dir;
+    _navLocked = true;
+    const body = document.querySelector('#reader .reader-body');
+    const doNav = () => {
+      App.rChapIdx = newIdx; _navLocked = false;
+      render(); PDFModule.prefetch(App.rComicId, newIdx);
+    };
+    if (body && dir !== 0) {
+      body.classList.add(dir > 0 ? 'anim-exit-next' : 'anim-exit-prev');
+      body.addEventListener('animationend', doNav, { once: true });
+    } else { doNav(); }
   }
 
   function close() {
@@ -90,21 +108,17 @@ window.Reader = (() => {
 
     /* chapter nav */
     const nav = UI.div('rnav');
-    const pb = UI.mkBtn('btn-ghost btn-sm', '← Trước', () => {
-      if (App.rChapIdx > 0) { _navDir = -1; App.rChapIdx--; render(); PDFModule.prefetch(App.rComicId, App.rChapIdx); }
-    });
+    const pb = UI.mkBtn('btn-ghost btn-sm', '← Trước', () => navigate(App.rChapIdx - 1));
     pb.disabled = App.rChapIdx === 0;
     const ni = UI.div('rni'); ni.textContent = `Ch ${App.rChapIdx + 1} / ${chaps.length}`;
-    const nb = UI.mkBtn('btn-ghost btn-sm', 'Sau →', () => {
-      if (App.rChapIdx < chaps.length - 1) { _navDir = 1; App.rChapIdx++; render(); PDFModule.prefetch(App.rComicId, App.rChapIdx); }
-    });
+    const nb = UI.mkBtn('btn-ghost btn-sm', 'Sau →', () => navigate(App.rChapIdx + 1));
     nb.disabled = App.rChapIdx >= chaps.length - 1;
     const jw = UI.div('rj'), jl = UI.div('rjl'); jl.textContent = 'Đến chương:';
     const ji = UI.el('input', 'rji'); ji.type = 'number'; ji.value = chap.num; ji.min = 1;
     const jb = UI.mkBtn('btn-ghost btn-xs', 'Đi', () => {
       const n = parseInt(ji.value), idx = chaps.findIndex(c => c.num === n);
       if (idx < 0) { alert(`Không tìm thấy chương ${n}`); return; }
-      App.rChapIdx = idx; render(); PDFModule.prefetch(App.rComicId, App.rChapIdx);
+      navigate(idx);
     });
     ji.addEventListener('keydown', e => { if (e.key === 'Enter') jb.click(); });
     [jl, ji, jb].forEach(x => jw.appendChild(x));
@@ -113,6 +127,7 @@ window.Reader = (() => {
 
     /* body */
     const body = UI.div();
+    body.className = 'reader-body';
     body.style.cssText = 'display:flex;flex:1;overflow:hidden;flex-direction:column';
     if (_navDir !== 0) {
       body.classList.add(_navDir > 0 ? 'anim-slide-rtl' : 'anim-slide-ltr');

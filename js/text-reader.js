@@ -10,6 +10,7 @@ window.TextReader = (() => {
   let chapIdx      = 0;
   let selLangs     = [];  // cột đọc song song (tối đa 3)
   let tooltipLangs = [];  // ngôn ngữ hiện trong tooltip
+  let _navDir = 0, _navLocked = false;
   const tip = () => document.getElementById('anno-tooltip');
 
   /* ── Open ── */
@@ -37,6 +38,23 @@ window.TextReader = (() => {
     document.getElementById('reader').style.display = 'none';
     document.getElementById('reader').innerHTML = '';
     hideTooltip();
+  }
+
+  async function navigate(newIdx) {
+    if (_navLocked) return;
+    const chaps = comicData?.chapters || [];
+    if (newIdx < 0 || newIdx >= chaps.length) return;
+    if (chaps[newIdx]?.type !== 'text') return;
+    const dir = Math.sign(newIdx - chapIdx);
+    _navDir = dir;
+    _navLocked = true;
+    const body = document.querySelector('#reader .text-reader-body');
+    if (body && dir !== 0) {
+      body.classList.add(dir > 0 ? 'anim-exit-next' : 'anim-exit-prev');
+      await new Promise(r => body.addEventListener('animationend', r, { once: true }));
+    }
+    await open(comicData.id, newIdx);
+    _navLocked = false;
   }
 
   /* ── Tooltip ──────────────────────────────────────────── */
@@ -98,19 +116,20 @@ window.TextReader = (() => {
     /* Chapter nav */
     const chaps = comicData.chapters || [];
     const nav = UI.div('rnav');
-    const pb = UI.mkBtn('btn-ghost btn-sm', '← Trước', async () => {
-      if (chapIdx > 0) { chapIdx--; const m = chaps[chapIdx]; if (m?.type==='text') await open(comicData.id, chapIdx); }
-    }); pb.disabled = chapIdx === 0;
+    const pb = UI.mkBtn('btn-ghost btn-sm', '← Trước', () => navigate(chapIdx - 1));
+    pb.disabled = chapIdx === 0;
     const ni = UI.div('rni'); ni.textContent = `Ch ${chapIdx+1} / ${chaps.length}`;
-    const nb = UI.mkBtn('btn-ghost btn-sm', 'Sau →', async () => {
-      if (chapIdx < chaps.length-1) { chapIdx++; const m = chaps[chapIdx]; if (m?.type==='text') await open(comicData.id, chapIdx); }
-    }); nb.disabled = chapIdx >= chaps.length-1;
+    const nb = UI.mkBtn('btn-ghost btn-sm', 'Sau →', () => navigate(chapIdx + 1));
+    nb.disabled = chapIdx >= chaps.length-1;
     [pb, ni, nb].forEach(x => nav.appendChild(x));
     rd.appendChild(nav);
 
     rd.appendChild(buildLangBar());
 
-    const body = UI.div(); body.style.cssText='flex:1;overflow:hidden;display:flex;flex-direction:column';
+    const body = UI.div();
+    body.className = 'text-reader-body';
+    body.style.cssText = 'flex:1;overflow:hidden;display:flex;flex-direction:column';
+    if (_navDir !== 0) { body.classList.add(_navDir > 0 ? 'anim-slide-rtl' : 'anim-slide-ltr'); _navDir = 0; }
     body.appendChild(buildColumns());
     rd.appendChild(body);
   }
